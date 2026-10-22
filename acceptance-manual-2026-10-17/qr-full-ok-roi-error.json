@@ -1,0 +1,227 @@
+{
+  "schema_version": 2,
+  "report_type": "label_baseline",
+  "analysis_id": "analysis1analysis1analysis1analy",
+  "status": "completed_with_errors",
+  "analyzed_at": "2026-10-17T00:00:00+00:00",
+  "analysis_duration_seconds": 0.5,
+  "provenance": {
+    "implementation_version": "local-label-analysis-2",
+    "source_sha256": {}
+  },
+  "warnings": [],
+  "source": {
+    "path": "D:\\synthetic\\not-a-real-image.png",
+    "format": "PNG",
+    "bytes": 1234,
+    "sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "width": 640,
+    "height": 480,
+    "mode": "RGB"
+  },
+  "preprocessing": {
+    "exif_orientation": 1,
+    "region": "full_image"
+  },
+  "analysis_config": {
+    "decoder": {
+      "formats": [
+        "QRCode"
+      ]
+    }
+  },
+  "config_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "known_truth": {
+    "status": "not_provided"
+  },
+  "attempts": [
+    {
+      "region": {
+        "kind": "full_image",
+        "x": 0,
+        "y": 0,
+        "width": 640,
+        "height": 480
+      },
+      "profile": "baseline",
+      "metrics": {
+        "brightness": 100.0,
+        "sharpness": 10.0,
+        "contrast": 30.0
+      },
+      "decode": {
+        "status": "decoded",
+        "symbols": [
+          {
+            "valid": true,
+            "format": "QRCode",
+            "text": "SYNTHETIC-PAYLOAD-ALPHA",
+            "payload_base64": "U1lOVEhFVElDLVBBWUxPQUQtQUxQSEE=",
+            "position_region": [
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "position_analysis_image": [
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "error": null
+          }
+        ],
+        "selected_attempt_index": 0,
+        "failed_attempt_indices": []
+      },
+      "truth_check": {
+        "status": "not_provided",
+        "comparison": "exact_payload_bytes"
+      }
+    },
+    {
+      "region": {
+        "kind": "roi",
+        "x": 10,
+        "y": 10,
+        "width": 100,
+        "height": 100
+      },
+      "profile": "baseline",
+      "metrics": {
+        "brightness": 100.0,
+        "sharpness": 10.0,
+        "contrast": 30.0
+      },
+      "decode": {
+        "status": "decode_error",
+        "symbols": [],
+        "selected_attempt_index": null,
+        "failed_attempt_indices": [
+          1
+        ]
+      },
+      "truth_check": {
+        "status": "decode_error",
+        "comparison": "exact_payload_bytes"
+      }
+    }
+  ],
+  "decode_summaries": [
+    {
+      "region": {
+        "kind": "full_image",
+        "x": 0,
+        "y": 0,
+        "width": 640,
+        "height": 480
+      },
+      "attempt_indices": [
+        0
+      ],
+      "decode": {
+        "status": "decoded",
+        "symbols": [
+          {
+            "valid": true,
+            "format": "QRCode",
+            "text": "SYNTHETIC-PAYLOAD-ALPHA",
+            "payload_base64": "U1lOVEhFVElDLVBBWUxPQUQtQUxQSEE=",
+            "position_region": [
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "position_analysis_image": [
+              [
+                0,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "error": null
+          }
+        ],
+        "selected_attempt_index": 0,
+        "failed_attempt_indices": []
+      },
+      "truth_check": {
+        "status": "not_provided",
+        "comparison": "exact_payload_bytes"
+      }
+    },
+    {
+      "region": {
+        "kind": "roi",
+        "x": 10,
+        "y": 10,
+        "width": 100,
+        "height": 100
+      },
+      "attempt_indices": [
+        1
+      ],
+      "decode": {
+        "status": "decode_error",
+        "symbols": [],
+        "selected_attempt_index": null,
+        "failed_attempt_indices": [
+          1
+        ]
+      },
+      "truth_check": {
+        "status": "decode_error",
+        "comparison": "exact_payload_bytes"
+      }
+    }
+  ]
+}

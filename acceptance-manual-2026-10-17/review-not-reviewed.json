@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "report_type": "capture_task_review",
+  "run_id": "run10000000000000000000000000000",
+  "task_status": "failed",
+  "verification_status": "not_reviewed",
+  "comparison_basis": "current_algorithm_one_decimal",
+  "counts": null,
+  "frames": [],
+  "issues": [],
+  "warnings": []
+}

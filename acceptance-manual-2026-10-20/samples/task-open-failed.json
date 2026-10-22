@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "report_type": "camera_timed_capture",
+  "run_id": "run10000000000000000000000000000",
+  "status": "failed",
+  "stop_reason": "open_failed",
+  "config": {
+    "camera_index": 9999,
+    "duration_seconds": 30,
+    "interval_seconds": 5
+  },
+  "camera": {
+    "requested_backend": "CAP_DSHOW",
+    "actual_backend": null,
+    "first_frame_size": null
+  },
+  "timings": {
+    "started_at_utc": null,
+    "ended_at_utc": null,
+    "capture_elapsed_seconds": null
+  },
+  "counts": {
+    "planned_sample_slots": 6,
+    "read_attempts": 0,
+    "valid_frames": 0,
+    "sample_attempts": 0,
+    "samples_completed": 0
+  },
+  "metric_config": {
+    "dark_threshold": 30,
+    "bright_threshold": 225
+  },
+  "samples": [],
+  "primary_error": {
+    "stage": "open",
+    "type": "CaptureTaskError",
+    "message": "合成打开失败"
+  },
+  "cleanup_errors": [],
+  "provenance": {
+    "implementation_version": "timed-capture-1",
+    "runtime": {
+      "python": "3.12.10",
+      "opencv": "5.0.0",
+      "numpy": "2.5.3"
+    },
+    "source_sha256": {
+      "capture_task.py": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  }
+}

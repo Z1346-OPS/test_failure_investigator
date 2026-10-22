@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "report_type": "capture_task_review",
+  "run_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "task_status": "completed",
+  "verification_status": "consistent",
+  "comparison_basis": "current_algorithm_one_decimal",
+  "counts": {
+    "reported_samples": 2,
+    "csv_pairs": 2,
+    "verified_frames": 2
+  },
+  "frames": [
+    {
+      "frame_count": 1,
+      "image_sha256_match": true,
+      "metrics": {}
+    },
+    {
+      "frame_count": 2,
+      "image_sha256_match": true,
+      "metrics": {}
+    }
+  ],
+  "issues": [],
+  "warnings": []
+}

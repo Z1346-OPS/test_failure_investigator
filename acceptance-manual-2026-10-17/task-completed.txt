@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "report_type": "camera_timed_capture",
+  "run_id": "run10000000000000000000000000000",
+  "status": "completed",
+  "stop_reason": "duration_reached",
+  "config": {
+    "camera_index": 0,
+    "duration_seconds": 30,
+    "interval_seconds": 5
+  },
+  "camera": {
+    "requested_backend": "CAP_DSHOW",
+    "actual_backend": "DSHOW",
+    "first_frame_size": [
+      8,
+      6
+    ]
+  },
+  "timings": {
+    "started_at_utc": "2026-10-17T00:00:00.000+00:00",
+    "ended_at_utc": "2026-10-17T00:00:30.000+00:00",
+    "capture_elapsed_seconds": 30.0
+  },
+  "counts": {
+    "planned_sample_slots": 6,
+    "read_attempts": 20,
+    "valid_frames": 20,
+    "sample_attempts": 2,
+    "samples_completed": 2
+  },
+  "metric_config": {
+    "dark_threshold": 30,
+    "bright_threshold": 225
+  },
+  "samples": [
+    {
+      "frame_count": 1,
+      "slot_index": 0,
+      "scheduled_elapsed_seconds": 0,
+      "read_elapsed_seconds": 0.0,
+      "width": 8,
+      "height": 6,
+      "quality_status": "written",
+      "color_status": "written",
+      "image_status": "written",
+      "image_file": "camera_frame_run10000000000000000000000000000_1.png",
+      "image_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "frame_count": 2,
+      "slot_index": 1,
+      "scheduled_elapsed_seconds": 5,
+      "read_elapsed_seconds": 5.0,
+      "width": 8,
+      "height": 6,
+      "quality_status": "written",
+      "color_status": "written",
+      "image_status": "written",
+      "image_file": "camera_frame_run10000000000000000000000000000_2.png",
+      "image_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "primary_error": null,
+  "cleanup_errors": [],
+  "provenance": {
+    "implementation_version": "timed-capture-1",
+    "runtime": {
+      "python": "3.12.10",
+      "opencv": "5.0.0",
+      "numpy": "2.5.3"
+    },
+    "source_sha256": {
+      "capture_task.py": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  }
+}
