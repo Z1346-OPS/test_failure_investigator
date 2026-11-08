@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from investigator.issue_card import format_issue_card
+from investigator.issue_card import format_issue_card, history_source
 from investigator.explain import explain_report
 from investigator.export import render_markdown, short_conclusion
 from investigator.reports import load_report
@@ -110,6 +110,14 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertIn(final.summary, render_markdown(self.session))
         self.assertEqual(len(final.history), 4)
         self.assertEqual(final.repeat_notice, "")
+        detail = self.details()
+        # 四次读取使用同一文件名；每条历史必须引用当时的报告。
+        sources = [history_source(detail, event) for event in detail["history"]]
+        for text, ctx in zip(sources, ["主报告", "补充记录 1", "补充记录 2", "补充记录 4"], strict=True):
+            prefix = detail["evidence"][ctx]["source_sha256"][:16]
+            self.assertIn("report.json | 报告 SHA-256 前 16 位 " + prefix, text)
+        self.assertEqual(len(set(sources)), 4)
+        self.assertEqual(["frames[0] → 帧 2" in s for s in sources], [False, True, False, True])
 
     def test_multi_issue_handoff_lists_open_then_closed_with_card_evidence(self):
         self.ingest(review((), issues=[missing(1), missing(2)]))

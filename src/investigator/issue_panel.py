@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from .issue_card import format_issue_card
+from .issue_card import format_issue_card, history_source
 
 
 class IssueDetailFrame(ttk.Frame):
@@ -75,12 +75,15 @@ class IssueDetailFrame(ttk.Frame):
         controls = ttk.Frame(self.card)
         controls.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
         history = ttk.Frame(self.card)
-        for line in view.history:
-            ttk.Label(history, text=line, wraplength=610, justify="left").pack(anchor="w")
         def toggle():
             if history.winfo_manager():
                 history.grid_remove()
             else:
+                if not history.winfo_children():
+                    for line, event in zip(view.history, detail["history"], strict=True):
+                        ttk.Label(history, text=line, wraplength=610, justify="left").pack(anchor="w")
+                        ttk.Label(history, text=history_source(detail, event), style="Muted.TLabel",
+                                  wraplength=610, justify="left").pack(anchor="w", pady=(0, 4))
                 history.grid(row=7, column=0, columnspan=2, sticky="w")
             verb = "收起" if history.winfo_manager() else "展开"
             disclosure.configure(text=f"{verb}状态历史（{len(view.history)}）")

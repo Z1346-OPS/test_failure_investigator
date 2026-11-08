@@ -35,6 +35,23 @@ def _repeat_notice(detail):
     return note
 
 
+def _verified_frame_location(evidence, frame):
+    for row in evidence["verified_frames"]:
+        if row["frame_count"] == frame:
+            return f"{row['locator']} → 帧 {frame}"
+    return ""
+
+
+def history_source(detail: dict, event: dict) -> str:
+    evidence = detail["evidence"][event["context"]]
+    fields = [evidence["source_name"], f"报告 SHA-256 前 16 位 {evidence['source_sha256'][:16]}"]
+    if event["event"] == "范围内不再出现":
+        location = _verified_frame_location(evidence, detail["frame_count"])
+        if location:
+            fields.append(location)
+    return " | ".join(fields)
+
+
 def format_issue_card(detail: dict) -> IssueCardView:
     ident = detail["issue_id"]
     frame = detail["frame_count"]
@@ -54,9 +71,9 @@ def format_issue_card(detail: dict) -> IssueCardView:
     if context == detail["origin"]["context"]:
         location += " | " + detail["origin"]["locator"]
     if closed:
-        row = next((r for r in evidence["verified_frames"] if r["frame_count"] == frame), None)
-        if row:
-            location += f" | {row['locator']} → 帧 {frame}"
+        frame_location = _verified_frame_location(evidence, frame)
+        if frame_location:
+            location += " | " + frame_location
             basis = f"{context} 核实了帧 {frame}，图片摘要匹配，五项指标逐项一致。"
     elif event["event"] == "未解决":
         numbers = evidence["verified_frame_counts"]

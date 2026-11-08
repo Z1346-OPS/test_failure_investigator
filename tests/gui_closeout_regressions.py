@@ -82,8 +82,19 @@ class CloseoutGuiRegressions(unittest.TestCase):
             expected = self.app.session.get_issue_details(self.app.session.investigation_id, "P02")
             copied.assert_called_once_with(format_issue_card(expected).summary)
         label = f"展开状态历史（{len(expected['history'])}）"
+        source = expected["evidence"]["补充记录 1"]
+        source_label = f"one-closed.json | 报告 SHA-256 前 16 位 {source['source_sha256'][:16]}"
+        def sources():
+            return [w for w in widgets(panel) if w.winfo_class() == "TLabel" and w.cget("text") == source_label]
+        self.assertEqual(sources(), [])
         button(panel, label).invoke()
-        self.assertTrue(button(panel, label.replace("展开", "收起")).winfo_exists())
+        self.app.update()
+        self.assertTrue(sources()[0].winfo_ismapped())
+        button(panel, label.replace("展开", "收起")).invoke()
+        self.app.update()
+        self.assertFalse(sources()[0].winfo_ismapped())
+        button(panel, label).invoke()
+        self.assertEqual(len(sources()), 1)
         with mock.patch.object(self.app.session, "get_issue_details", return_value=None):
             self.app._render()
             self.assertFalse(any(isinstance(w, IssueDetailFrame) for w in self.app.body.winfo_children()))
