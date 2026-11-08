@@ -1093,6 +1093,13 @@ def run(workdir: Path) -> int:
             drive_preview(app, lambda: None, capture=lifecycle_preview)
             app.save_note()
         lifecycle_export = lifecycle_target.read_text(encoding="utf-8")
+        issue = app.session.get_issue_details(app.session.investigation_id, "P01")
+        scope = issue["evidence"]["补充记录 2"]
+        check("查询和导出给出同一局部复核的帧集合及执行身份",
+              issue["status"] == "open" and scope["verified_frame_counts"] == [1]
+              and scope["review_id"] in lifecycle_export
+              and scope["reviewed_at_utc"] in lifecycle_export
+              and "frames（按全部逐帧记录核实的帧号） | [1]" in lifecycle_export)
         check("三份导入真实导出保留未解决问题与历史",
               "缺少帧 2" in lifecycle_export and "调查问题历史" in lifecycle_export
               and "仅与主报告的单次比较" in lifecycle_export)
@@ -1100,6 +1107,10 @@ def run(workdir: Path) -> int:
               bool(lifecycle_preview) and lifecycle_preview[0].rstrip() == lifecycle_export.rstrip())
         capture_window(app, shots / "lifecycle-unresolved.png")
         load_addition(app, lifecycle_full)
+        closed = app.session.get_issue_details(app.session.investigation_id, "P01")
+        check("完整复核后查询与界面显示同一问题在范围内关闭",
+              closed["status"] == "closed_in_scope" and closed["resolved_by"] == "补充记录 3"
+              and "范围内通过" in " ".join(body_texts(app)))
         check("随后有效完整结果允许范围内关闭",
               app.session.investigation_summary()[0] == "范围内通过"
               and not app.session.unresolved_review_problems()

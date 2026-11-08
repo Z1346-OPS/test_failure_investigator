@@ -20,7 +20,7 @@ from uuid import uuid4
 
 from .explain import DECODE_TEXT, REVIEW_ISSUE_TEXT, STOP_REASON_TEXT, Explanation
 from .reports import (
-    LoadedReport, label_validation_warnings, review_frame_verified,
+    LoadedReport, label_validation_warnings, review_frame_verified, review_scope_evidence,
     review_validation_warnings, valid_review_id, valid_sha256,
 )
 
@@ -450,6 +450,68 @@ class Session:
 
     def unresolved_review_problems(self) -> list[ReviewProblem]:
         return [problem for problem in self.review_problems() if problem.resolved_by is None]
+
+    def get_issue_details(self, investigation_id: str, issue_id: str) -> dict:
+        """返回本调查采集问题的独立 JSON 快照。空编号抛 ValueError，未知编号抛 KeyError。"""
+        for name, value in (("investigation_id", investigation_id), ("issue_id", issue_id)):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(name)
+        if investigation_id != self.investigation_id or self.primary is None:
+            raise KeyError(investigation_id)
+        problem = next((p for p in self.review_problems() if p.ident == issue_id), None)
+        if problem is None:
+            raise KeyError(issue_id)
+
+        reports = {"主报告": self.primary}
+        additions = {f"补充记录 {i}": item for i, item in enumerate(self.additions, 1)}
+        reports.update({context: item.report for context, item in additions.items()})
+        history = [{"context": ctx, "event": action, "reason": reason}
+                   for ctx, action, reason in problem.history]
+        evidence = {ctx: review_scope_evidence(reports[ctx])
+                    for ctx in dict.fromkeys(event["context"] for event in history)}
+
+        # 一个补充记录可能先评估已知问题，再记下同一问题再次出现。
+        # 以问题为对象的评估和以主报告为基线的比较有各自的来源及理由。
+        assessment = None
+        for ctx, action, reason in reversed(problem.history):
+            if action == "重新出现":
+                break
+            if action in {"未解决", "范围内不再出现"}:
+                relation = _assess_relation(problem.origin, reports[ctx])
+                assessment = {"context": ctx, "event": action, "reason": reason,
+                              "same_subject": relation.same_subject,
+                              "condition_conflict": relation.condition_conflict}
+                break
+        latest = None
+        if additions:
+            ctx = next(reversed(additions))
+            item = additions[ctx]
+            latest = {"context": ctx, "primary_sha256": self.primary.source_sha256,
+                      "source_sha256": item.report.source_sha256,
+                      "report_type": item.report.report_type, "is_repeat": item.is_repeat,
+                      "comparable_to_primary": item.comparable, "result": item.recheck_result,
+                      "reason": item.recheck_reason}
+
+        missing = []
+        if problem.resolved_by is None:
+            target = f"帧 {problem.frame}" if problem.frame is not None else "原问题声明的全部帧"
+            needed = f"补做同批次、口径可比且晚于问题记录的独立复核，核实{target}。"
+            if assessment and assessment["context"] == history[-1]["context"]:
+                missing.append(assessment["reason"])
+            else:
+                missing.append(needed)
+            next_step = needed
+        else:
+            next_step = "交接原失败和支持本次范围内关闭的复核记录。"
+        return {
+            "schema_version": 1, "investigation_id": investigation_id, "issue_id": issue_id,
+            "key": problem.key, "label": problem.label, "frame_count": problem.frame,
+            "status": "open" if problem.resolved_by is None else "closed_in_scope",
+            "origin": {"context": problem.origin_context, "locator": problem.locator},
+            "resolved_by": problem.resolved_by, "history": history, "evidence": evidence,
+            "last_issue_assessment": assessment, "latest_primary_comparison": latest,
+            "missing_evidence": missing, "next_step": next_step,
+        }
 
     def investigation_summary(self) -> tuple[str, str]:
         """调查当前状态，不等同于任意一次“主报告→补充报告”的比较。"""

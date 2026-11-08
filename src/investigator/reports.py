@@ -17,6 +17,7 @@ import math
 import os
 import re
 import stat
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -222,6 +223,31 @@ def review_frame_verified(frame) -> bool:
     if type(number) is not int or number < 1 or frame.get("image_sha256_match") is not True:
         return False
     return _review_metrics_match(frame.get("metrics"))
+
+
+def review_scope_evidence(report: LoadedReport) -> dict:
+    """按完整 frames 数组枚举通过逐帧规则的项，保留可回查的来源。"""
+    frames = report.get("frames")
+    verified = []
+    for index, frame in enumerate(frames or []):
+        if review_frame_verified(frame):
+            verified.append({
+                "locator": f"frames[{index}]",
+                "frame_count": frame["frame_count"],
+                "image_sha256_match": True,
+                "metrics": {name: frame["metrics"][name] for name in REVIEW_METRICS},
+            })
+    return deepcopy({
+        "source_name": report.source_name, "source_sha256": report.source_sha256,
+        "run_id": report.get("run_id"), "verification_status": report.get("verification_status"),
+        "comparison_basis": report.get("comparison_basis"),
+        "review_id": report.get("review_id"), "reviewed_at_utc": report.get("reviewed_at_utc"),
+        "declared_frame_counts": report.get("declared_frame_counts"), "scope_locator": "frames",
+        "verified_frame_counts": sorted({row["frame_count"] for row in verified})
+        if frames is not None else None,
+        "verified_frames": verified,
+        "warnings": list(dict.fromkeys(report.warnings + review_validation_warnings(report.data))),
+    })
 
 
 def _review_metrics_match(metrics) -> bool:

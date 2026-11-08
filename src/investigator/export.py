@@ -10,10 +10,12 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .explain import unknown_impact
 from .guides import current_card
+from .reports import review_scope_evidence, valid_review_id
 from .session import Session, new_problem_labels
 
 # 本机路径兜底：即使某处漏了字段，也不把绝对路径写进说明。
@@ -188,6 +190,17 @@ def render_markdown(session: Session) -> str:
         lines.append("")
         lines.append(_table(session.problem_history_dimension()))
         lines.append("")
+        lines.extend(["## 复核编号与开始时间", "",
+                      "| 调查内记录 | review_id | reviewed_at_utc |",
+                      "| --- | --- | --- |"])
+        records = [("主报告", session.primary)] + [
+            (f"补充记录 {index}", item.report) for index, item in enumerate(session.additions, 1)
+            if item.report.report_type == "capture_task_review"]
+        for context, report in records:
+            execution = report.get("review_id")
+            ident = execution if valid_review_id(execution) else "未知"
+            lines.append(f"| {context} | {ident} | {_utc_text(report.get('reviewed_at_utc'))} |")
+        lines.append("")
     lines.append("## 前后结果与比较限制")
     lines.append("")
     lines.append("以下逐次比较的基线始终为原主报告，仅说明各次比较范围，不替代调查当前状态。")
@@ -227,14 +240,17 @@ def render_markdown(session: Session) -> str:
     lines.append("## 技术详情")
     lines.append("")
     if explanation is not None:
-        records = [("主报告", explanation)] + [
-            (f"补充记录 {index}", addition.explanation)
+        records = [("主报告", explanation, session.primary)] + [
+            (f"补充记录 {index}", addition.explanation, addition.report)
             for index, addition in enumerate(session.additions, start=1)]
-        for context, item in records:
+        for context, item, report in records:
             lines.append(f"### {context}技术详情")
             lines.append("")
             lines.append(_table(item.technical))
             lines.append("")
+            if report.report_type == "capture_task_review":
+                lines.append(_table(_review_scope_rows(report)))
+                lines.append("")
             lines.append(f"#### {context}证据定位")
             lines.append("")
             if item.evidence:
@@ -268,6 +284,29 @@ def render_markdown(session: Session) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+def _utc_text(value) -> str:
+    try:
+        moment = datetime.fromisoformat(value)
+        return moment.isoformat() if moment.utcoffset() == timedelta(0) else "未知"
+    except (ValueError, TypeError):
+        return "未知"
+
+
+def _review_scope_rows(report) -> list[tuple[str, str]]:
+    scope = review_scope_evidence(report)
+    declared = scope["declared_frame_counts"]
+    valid = isinstance(declared, list) and all(type(n) is int and n > 0 for n in declared)
+    verified = scope["verified_frame_counts"]
+    return [
+        ("报告 SHA-256", scope["source_sha256"]),
+        ("declared_frame_counts（声明范围）", str(declared) if valid else "未知"),
+        ("frames（按全部逐帧记录核实的帧号）", str(verified) if verified is not None else "未知"),
+        ("逐帧依据（摘要匹配且五项指标一致）", "、".join(
+            f"{row['locator']} → 帧 {row['frame_count']}" for row in scope["verified_frames"]
+        ) or "无可引用的核实帧"),
+    ]
 
 
 def save_markdown(session: Session, target, *, payload: str | None = None) -> Path:
