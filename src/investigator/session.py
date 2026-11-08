@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from .explain import DECODE_TEXT, REVIEW_ISSUE_TEXT, STOP_REASON_TEXT, Explanation
+from .explain import DECODE_TEXT, REVIEW_ISSUE_TEXT, STOP_REASON_TEXT, Explanation, qr_content_conclusion
 from .issue_card import format_issue_card
 from .reports import (
     LoadedReport, label_validation_warnings, review_frame_verified, review_scope_evidence,
@@ -582,10 +582,14 @@ class Session:
         gaps: list[str] = []
         if self.primary and self.primary.report_type == "capture_task_review":
             gaps.append(self.investigation_summary()[1])
+        qr_primary = self.primary is not None and self.primary.report_type == "label_baseline"
         if self.primary_explanation is not None:
-            gaps.extend(self.primary_explanation.unknowns)
+            prefix = "主报告当时：" if qr_primary and self.additions else ""
+            gaps.extend(prefix + unknown for unknown in self.primary_explanation.unknowns)
         for index, addition in enumerate(self.additions, start=1):
             gaps.append(f"补充记录 {index}：{addition.recheck_result}。{addition.recheck_reason}")
+            if qr_primary and addition.report.report_type == "label_baseline" and not addition.is_repeat:
+                gaps.append(f"补充记录 {index} 内容核验：{qr_content_conclusion(addition.report)}")
             gaps.extend(f"补充记录 {index}：{unknown}"
                         for unknown in addition.explanation.unknowns)
             if addition.comparison_reason != addition.recheck_reason:

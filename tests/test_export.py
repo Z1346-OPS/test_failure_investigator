@@ -143,6 +143,10 @@ class RenderTests(unittest.TestCase):
                     self.assertIn("补充报告中，本次整图读出的内容与所给答案" + wording, home)
                     self.assertNotIn("仍未确认：没有独立答案", home)
                     self.assertEqual("重复导入" in home, repeat)
+                    gaps = session.remaining_dimension()
+                    self.assertTrue(any(line.startswith("主报告当时：没有独立答案") for line in gaps))
+                    self.assertFalse(any(line.startswith("没有独立答案") for line in gaps))
+                    self.assertIn("补充记录 1 内容核验：整图读出的内容与所给答案" + wording + "。", gaps)
 
     def test_qr_homepage_does_not_claim_a_match_without_valid_evidence(self) -> None:
         primary = load(synthetic.label_baseline_report(), "primary.json")
