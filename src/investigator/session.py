@@ -13,12 +13,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
+from functools import cache
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from .explain import DECODE_TEXT, REVIEW_ISSUE_TEXT, STOP_REASON_TEXT, Explanation
+from .issue_card import format_issue_card
 from .reports import (
     LoadedReport, label_validation_warnings, review_frame_verified, review_scope_evidence,
     review_validation_warnings, valid_review_id, valid_sha256,
@@ -470,12 +473,31 @@ class Session:
         if problem is None:
             raise KeyError(issue_id)
 
+        return next(self._issue_details_for([problem]))
+
+    def multi_issue_summaries(self) -> list[str]:
+        """多问题导出按窗口顺序列出交接摘要；单问题沿用现有导出。"""
+        problems = self.review_problems_by_priority()
+        if len(problems) < 2:
+            return []
+        return [format_issue_card(detail).summary for detail in self._issue_details_for(problems)]
+
+    def _issue_details_for(self, problems: list[ReviewProblem]) -> Iterator[dict]:
         reports = {"主报告": self.primary}
         additions = {f"补充记录 {i}": item for i, item in enumerate(self.additions, 1)}
         reports.update({context: item.report for context, item in additions.items()})
+
+        @cache
+        def scope(context):
+            return review_scope_evidence(reports[context])
+
+        for problem in problems:
+            yield self._issue_snapshot(problem, reports, additions, scope)
+
+    def _issue_snapshot(self, problem, reports, additions, scope) -> dict:
         history = [{"context": ctx, "event": action, "reason": reason}
                    for ctx, action, reason in problem.history]
-        evidence = {ctx: review_scope_evidence(reports[ctx])
+        evidence = {ctx: scope(ctx)
                     for ctx in dict.fromkeys(event["context"] for event in history)}
 
         # 一个补充记录可能先评估已知问题，再记下同一问题再次出现。
@@ -512,7 +534,7 @@ class Session:
         else:
             next_step = "交接原失败和支持本次范围内关闭的复核记录。"
         return {
-            "schema_version": 1, "investigation_id": investigation_id, "issue_id": issue_id,
+            "schema_version": 1, "investigation_id": self.investigation_id, "issue_id": problem.ident,
             "key": problem.key, "label": problem.label, "frame_count": problem.frame,
             "status": problem.status,
             "origin": {"context": problem.origin_context, "locator": problem.locator},

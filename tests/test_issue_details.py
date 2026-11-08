@@ -111,6 +111,23 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertEqual(len(final.history), 4)
         self.assertEqual(final.repeat_notice, "")
 
+    def test_multi_issue_handoff_lists_open_then_closed_with_card_evidence(self):
+        self.ingest(review((), issues=[missing(1), missing(2)]))
+        self.ingest(review((1,)))
+        doc = render_markdown(self.session)
+        section = doc.split("## 逐项交接\n\n", 1)[1].split("\n## 下一步", 1)[0].strip()
+        expected = []
+        for ident in ("P02", "P01"):
+            detail = self.session.get_issue_details(self.session.investigation_id, ident)
+            expected.append("- " + format_issue_card(detail).summary)
+        self.assertEqual(section.splitlines(), expected)
+        self.assertIn("缺少帧 2", expected[0])
+        self.assertIn("frames[0] → 帧 1", expected[1])
+
+    def test_single_issue_keeps_existing_handoff_layout(self):
+        self.ingest(review((1,), issues=[missing(2)]))
+        self.assertNotIn("## 逐项交接", render_markdown(self.session))
+
     def test_changed_batch_and_legacy_identity(self):
         self.ingest(review((1,), issues=[missing(2)]))
         other = review((2,))

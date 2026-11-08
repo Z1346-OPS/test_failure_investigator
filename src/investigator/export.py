@@ -164,6 +164,10 @@ def render_markdown(session: Session) -> str:
     lines.append(short_conclusion(session))
     lines.append("")
 
+    summaries = session.multi_issue_summaries()
+    if summaries:
+        lines.extend(["## 逐项交接", "", _bullet_list(summaries), ""])
+
     card = current_card(session)
     lines.append("## 下一步")
     lines.append("")
