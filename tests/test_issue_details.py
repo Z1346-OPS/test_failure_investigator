@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from investigator.issue_card import format_issue_card
 from investigator.explain import explain_report
 from investigator.export import render_markdown, short_conclusion
 from investigator.reports import load_report
@@ -80,6 +81,30 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertIsNone(reopened["last_issue_assessment"])
         self.assertEqual(before["status"], "open")
         json.dumps(reopened, ensure_ascii=False, allow_nan=False)
+
+    def test_card_reopened_repeat_and_reclosed(self):
+        self.ingest(review((1,), issues=[missing(2)]))
+        first = review((2,))
+        self.ingest(first)
+        card = format_issue_card(self.details())
+        self.assertIn("frames[0] → 帧 2", card.location)
+        self.assertIn(card.summary, render_markdown(self.session))
+        self.assertIn("没有待补检查", card.missing)
+        self.ingest(review((1,), issues=[missing(2)]))
+        reopened = format_issue_card(self.details())
+        self.assertIn("重新出现", reopened.decision)
+        self.assertIn("核实帧 2", reopened.missing)
+        self.ingest(first)
+        repeat = format_issue_card(self.details())
+        self.assertEqual(repeat.history, reopened.history)
+        self.assertEqual(repeat.decision, reopened.decision)
+        self.assertIn("补充记录 1 已用这份报告", repeat.repeat_notice)
+        self.ingest(review((2,)))
+        final = format_issue_card(self.details())
+        self.assertIn("再次关闭", final.decision)
+        self.assertIn("补充记录 4", final.location)
+        self.assertEqual(len(final.history), 4)
+        self.assertEqual(final.repeat_notice, "")
 
     def test_changed_batch_and_legacy_identity(self):
         self.ingest(review((1,), issues=[missing(2)]))

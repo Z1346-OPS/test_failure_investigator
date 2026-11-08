@@ -1,7 +1,7 @@
 """单窗口界面：选报告 → 看懂结果和下一步 → 按需补充结果或保存说明。
 
 三个内容区（目前发现 / 还不能确认 / 下一步）始终在主区域可见；
-只有技术详情折叠。关键错误与未知不进入折叠区。
+技术详情和问题历史可折叠。关键错误与未知不进入折叠区。
 
 不含聊天框、账户、模型设置、侧边栏、历史中心、仪表盘、评分或装饰图表。
 """
@@ -25,6 +25,7 @@ from .guides import (
     PRACTICE_NOTE,
     current_card,
 )
+from .issue_panel import IssueDetailFrame
 from .reports import SUPPORTED_TYPES, TYPE_LABELS, ReportError, load_report
 from .session import Session, new_problem_labels
 
@@ -69,6 +70,7 @@ class InvestigatorApp(tk.Tk):
         self._notice: str | None = None
         self._view = "welcome"          # welcome | supported | no_report | report
         self._technical_visible = False
+        self._selected_issue = None
         self._note_visible = False
         self._pending_addition = None   # (report, explanation) 等待关联回答
         self._pending_question = None   # 待用户回答的那个必要问题
@@ -344,7 +346,18 @@ class InvestigatorApp(tk.Tk):
         if report.report_type == "capture_task_review":
             self._section("当前调查")
             state, summary = self.session.investigation_summary()
-            self._label(self.body, f"{state}：{summary}", style="Notice.TLabel")
+            problems = self.session.review_problems()
+            panel = None
+            if problems:
+                panel = IssueDetailFrame(self.body, self.session, problems, self._selected_issue,
+                                         self._select_issue)
+            if panel is not None and panel.has_detail:
+                self._label(self.body, state, style="Section.TLabel")
+                panel.pack(fill="x")
+            else:
+                if panel is not None:
+                    panel.destroy()
+                self._label(self.body, f"{state}：{summary}", style="Notice.TLabel")
         # 1. 目前发现
         self._section("原主报告的发现" if report.report_type == "capture_task_review" else "目前发现")
         for item in explanation.findings:
@@ -397,11 +410,6 @@ class InvestigatorApp(tk.Tk):
                     self._label(self.body, "仍不能确认：" + unknown,
                                 style="Notice.TLabel", pady=(0, 2))
 
-        if report.report_type == "capture_task_review" and self.session.review_problems():
-            self._section("调查问题历史")
-            for label, value in self.session.problem_history_dimension():
-                self._label(self.body, f"{label}：{value}", style="Muted.TLabel")
-
         # 待回答的关联问题
         if self._pending_addition is not None:
             self._render_relation_question()
@@ -411,6 +419,9 @@ class InvestigatorApp(tk.Tk):
 
         # 技术详情（折叠）
         self._render_technical(explanation)
+
+    def _select_issue(self, ident: str) -> None:
+        self._selected_issue = ident
 
     def _render_action_card(self, card) -> None:
         self._section("现在做什么")
@@ -641,6 +652,7 @@ class InvestigatorApp(tk.Tk):
             self._pending_addition = None
             self._pending_question = None
             self._technical_visible = False
+            self._selected_issue = None
             self._note_visible = False
             self._note_draft = ""
             self._handoff_draft = ""

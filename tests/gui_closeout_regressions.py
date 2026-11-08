@@ -9,6 +9,9 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests import synthetic
+from tests.test_issue_lifecycle import missing, review
+from investigator.issue_card import format_issue_card
+from investigator.issue_panel import IssueDetailFrame
 from investigator import ui
 from investigator.guides import current_card
 
@@ -60,6 +63,32 @@ class CloseoutGuiRegressions(unittest.TestCase):
         self.app._render()
         self.app.update()
         self.assertEqual(self.app._note_text_value(), "SYNTHETIC-DRAFT")
+        self.assertEqual(self.errors, [])
+
+    def test_issue_selection_history_copy_and_fallback(self):
+        self.load(review((), issues=[missing(1), missing(2)]), "two.json")
+        self.load(review((1,)), "one-closed.json", addition=True)
+        panel = next(w for w in self.app.body.winfo_children() if isinstance(w, IssueDetailFrame))
+        self.assertEqual(panel.tree.get_children(), ("P02", "P01"))
+        self.assertEqual(panel.selected, "P02")
+        panel.tree.selection_set("P01")
+        self.app.update()
+        self.assertEqual(panel.selected, "P01")
+        panel.tree.selection_set("P02")
+        self.app.update()
+        self.assertEqual(panel.selected, "P02")
+        with mock.patch.object(panel, "clipboard_clear"), mock.patch.object(panel, "clipboard_append") as copied:
+            button(panel, "复制交接摘要").invoke()
+            expected = self.app.session.get_issue_details(self.app.session.investigation_id, "P02")
+            copied.assert_called_once_with(format_issue_card(expected).summary)
+        label = f"展开状态历史（{len(expected['history'])}）"
+        button(panel, label).invoke()
+        self.assertTrue(button(panel, label.replace("展开", "收起")).winfo_exists())
+        with mock.patch.object(self.app.session, "get_issue_details", return_value=None):
+            self.app._render()
+            self.assertFalse(any(isinstance(w, IssueDetailFrame) for w in self.app.body.winfo_children()))
+        self.load(synthetic.label_baseline_report(), "qr.json")
+        self.assertFalse(any(isinstance(w, IssueDetailFrame) for w in self.app.body.winfo_children()))
         self.assertEqual(self.errors, [])
 
     def test_help_round_trip_preserves_report_draft(self):

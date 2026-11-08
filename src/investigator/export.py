@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .explain import qr_content_conclusion, unknown_impact
 from .guides import current_card
+from .issue_card import format_issue_card
 from .reports import review_scope_evidence, valid_review_id
 from .session import RECHECK_PASSED, Session, new_problem_labels
 
@@ -54,9 +55,7 @@ def _single_frame_closure(session: Session) -> str:
     evidence = detail["evidence"][context]
     if evidence["verified_frame_counts"] != [problem.frame]:
         return ""
-    return (f"{problem.ident} 可在本次帧 {problem.frame} 范围内关闭。关闭该问题没有待补检查。"
-            f"{context} 核实了帧 {problem.frame}，图片摘要匹配，五项指标逐项一致。"
-            "首次无法核实的原因仍未知。请保留原失败和本次复核记录。")
+    return format_issue_card(detail).summary
 
 
 def short_conclusion(session: Session) -> str:
