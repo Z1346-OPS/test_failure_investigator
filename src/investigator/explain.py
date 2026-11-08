@@ -107,6 +107,32 @@ def _base_technical(report: LoadedReport) -> list[tuple[str, str]]:
 
 # ---------------------------------------------------------------- QR（G1）
 
+def qr_content_conclusion(report: LoadedReport) -> str:
+    """交接首页对单份 QR 报告自身的内容核验结论。"""
+    if report.warnings or label_validation_warnings(report.data):
+        return "记录存在校验提示，内容比对结论仍需复核。"
+    truth = report.get("known_truth", "status")
+    findings = []
+    for summary in report.get("decode_summaries", default=[]):
+        region = summary["region"]
+        label = _region_label(region) if region.get("kind") in {"full_image", "roi"} else "未知区域"
+        state = summary["decode"]["status"]
+        result = summary["truth_check"]["status"]
+        if truth == "provided" and state == "decoded" and result in {"correct", "incorrect"}:
+            match = "一致" if result == "correct" else "不一致"
+            findings.append(f"{label}读出的内容与所给答案逐字节{match}")
+        else:
+            findings.append(label + DECODE_TEXT.get(state, "的解码状态未知"))
+    if not findings:
+        return "缺少区域结果，内容正确性未验证。"
+    text = "；".join(findings)
+    if truth == "not_provided":
+        return text + "，但未提供独立答案，内容正确性未验证。"
+    if truth != "provided":
+        return text + "，独立答案状态未知。"
+    return text + "。"
+
+
 def _explain_qr(report: LoadedReport) -> Explanation:
     evidence = _Evidence()
     findings: list[str] = []

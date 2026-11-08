@@ -13,7 +13,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .explain import unknown_impact
+from .explain import qr_content_conclusion, unknown_impact
 from .guides import current_card
 from .reports import review_scope_evidence, valid_review_id
 from .session import Session, new_problem_labels
@@ -49,6 +49,7 @@ def short_conclusion(session: Session) -> str:
         return "尚未选择报告。"
     parts = [explanation.headline]
     is_review = session.primary.report_type == "capture_task_review"
+    qr_pair = False
     if is_review:
         state, summary = session.investigation_summary()
         parts.append(f"当前调查：{state}。{summary}")
@@ -61,6 +62,11 @@ def short_conclusion(session: Session) -> str:
         latest = session.additions[-1]
         substantive = [item for item in session.additions if not item.is_repeat]
         basis = substantive[-1] if substantive else latest
+        qr_pair = (bool(substantive) and session.primary.report_type == "label_baseline"
+                   and basis.report.report_type == "label_baseline")
+        if qr_pair:
+            parts.append("主报告当时" + qr_content_conclusion(session.primary))
+            parts.append("补充报告中，本次" + qr_content_conclusion(basis.report))
         if is_review:
             parts.append(f"仅与主报告的单次比较：{basis.recheck_result}；不代表调查全部问题已解决。")
         else:
@@ -71,7 +77,7 @@ def short_conclusion(session: Session) -> str:
         if latest.is_repeat:
             parts.append(f"最近一次导入（补充记录 {len(session.additions)}）重复导入了"
                          "已有材料，没有新增证据，不改变上一条复验结论。")
-    if explanation.unknowns:
+    if explanation.unknowns and not qr_pair:
         parts.append("仍未确认：" + explanation.unknowns[0])
     card = current_card(session)
     if card is not None:

@@ -97,6 +97,56 @@ class RenderTests(unittest.TestCase):
         self.assertIn("新出现", conclusion)
         self.assertIn("无法核实", conclusion)
 
+    def test_qr_homepage_distinguishes_original_and_latest_truth(self) -> None:
+        primary = load(synthetic.label_baseline_report(), "primary.json")
+        for state, wording in (("correct", "逐字节一致"), ("incorrect", "逐字节不一致")):
+            with self.subTest(state=state):
+                session = Session()
+                session.load_primary(primary, explain_report(primary))
+                self.assertIn("尚未验证内容是否正确", short_conclusion(session))
+                report = load(synthetic.label_baseline_report(
+                    regions=(("full_image", "decoded", state),), truth_status="provided"
+                ), "addition.json")
+                session.add_addition(report, explain_report(report))
+                for repeat in (False, True):
+                    if repeat:
+                        session.add_addition(primary, explain_report(primary))
+                    home = render_markdown(session).split("## 简明结论\n\n", 1)[1].split("\n## 下一步", 1)[0]
+                    self.assertIn("主报告当时整图读出了一个二维码，但未提供独立答案", home)
+                    self.assertIn("补充报告中，本次整图读出的内容与所给答案" + wording, home)
+                    self.assertNotIn("仍未确认：没有独立答案", home)
+                    self.assertEqual("重复导入" in home, repeat)
+
+    def test_qr_homepage_does_not_claim_a_match_without_valid_evidence(self) -> None:
+        primary = load(synthetic.label_baseline_report(), "primary.json")
+        for decode, check, truth in (("decoded", "not_provided", "not_provided"),
+                                     ("ambiguous", "decode_error", "provided"),
+                                     ("ambiguous", "correct", "provided")):
+            with self.subTest(decode=decode, check=check):
+                session = Session()
+                session.load_primary(primary, explain_report(primary))
+                report = load(synthetic.label_baseline_report(
+                    regions=(("full_image", decode, check),), truth_status=truth
+                ), "addition.json")
+                session.add_addition(report, explain_report(report))
+                self.assertNotIn("逐字节一致", short_conclusion(session))
+
+    def test_qr_homepage_keeps_full_image_and_roi_results_separate(self) -> None:
+        session = Session()
+        roi = {"x": 1, "y": 2, "width": 10, "height": 12}
+        for name, truth, checks in (("primary.json", "not_provided", ("not_provided", "not_provided")),
+                                    ("addition.json", "provided", ("correct", "incorrect"))):
+            report = load(synthetic.label_baseline_report(regions=(
+                ("full_image", "decoded", checks[0]), ("roi", "decoded", checks[1], roi)),
+                truth_status=truth), name)
+            if session.primary is None:
+                session.load_primary(report, explain_report(report))
+            else:
+                session.add_addition(report, explain_report(report))
+        home = short_conclusion(session)
+        self.assertIn("本次整图读出的内容与所给答案逐字节一致", home)
+        self.assertIn("ROI（x=1, y=2, 宽=10, 高=12）读出的内容与所给答案逐字节不一致", home)
+
     def test_comparison_limits_included(self) -> None:
         text = render_markdown(build_session())
         self.assertIn("比较限制", text)
