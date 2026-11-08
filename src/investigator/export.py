@@ -16,7 +16,7 @@ from pathlib import Path
 from .explain import qr_content_conclusion, unknown_impact
 from .guides import current_card
 from .reports import review_scope_evidence, valid_review_id
-from .session import Session, new_problem_labels
+from .session import RECHECK_PASSED, Session, new_problem_labels
 
 # 本机路径兜底：即使某处漏了字段，也不把绝对路径写进说明。
 _ABSOLUTE_PATH = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Za-z]:[\\/][^\s\"'<>|]*)|(?:\\\\[^\s\"'<>|]+)")
@@ -40,6 +40,25 @@ def scrub(text: str) -> str:
     return _ABSOLUTE_PATH.sub(_SCRUBBED, text or "")
 
 
+def _single_frame_closure(session: Session) -> str:
+    problems = session.review_problems()
+    if len(problems) != 1:
+        return ""
+    problem = problems[0]
+    if problem.frame is None or problem.key != f"frame_unverifiable:{problem.frame}":
+        return ""
+    detail = session.get_issue_details(session.investigation_id, problem.ident)
+    if detail["status"] != "closed_in_scope" or detail["missing_evidence"]:
+        return ""
+    context = detail["resolved_by"]
+    evidence = detail["evidence"][context]
+    if evidence["verified_frame_counts"] != [problem.frame]:
+        return ""
+    return (f"{problem.ident} 可在本次帧 {problem.frame} 范围内关闭。关闭该问题没有待补检查。"
+            f"{context} 核实了帧 {problem.frame}，图片摘要匹配，五项指标逐项一致。"
+            "首次无法核实的原因仍未知。请保留原失败和本次复核记录。")
+
+
 def short_conclusion(session: Session) -> str:
     """简明结论：整体状态 + 最要紧的一条发现 + 当前建议的一步。"""
     explanation = session.primary_explanation
@@ -50,10 +69,13 @@ def short_conclusion(session: Session) -> str:
     parts = [explanation.headline]
     is_review = session.primary.report_type == "capture_task_review"
     qr_pair = False
+    closure = ""
     if is_review:
         state, summary = session.investigation_summary()
-        parts.append(f"当前调查：{state}。{summary}")
-    if explanation.findings:
+        if state == RECHECK_PASSED:
+            closure = _single_frame_closure(session)
+        parts.append(f"当前调查：{state}。{closure or summary}")
+    if explanation.findings and not closure:
         parts.append(("原主报告：" if is_review else "") + explanation.findings[0])
     # 新结果改变了判断时，简明结论必须反映，不能只讲原始报告。
     # 重复导入不产生新证据：结论仍取最近一次有实质内容的补充记录，
@@ -83,9 +105,9 @@ def short_conclusion(session: Session) -> str:
                 parts.append(f"编号 {followup.get('config', 'camera_index')} 本次采集成功；"
                              f"编号 {session.primary.get('config', 'camera_index')} 的原问题"
                              "仍待可比复验，根因未知。")
-        if is_review:
+        if is_review and not closure:
             parts.append(f"仅与主报告的单次比较：{basis.recheck_result}；不代表调查全部问题已解决。")
-        else:
+        elif not is_review:
             parts.append(f"补充结果复验：{basis.recheck_result}。")
         new_problems = new_problem_labels(basis)
         if new_problems:
@@ -93,7 +115,7 @@ def short_conclusion(session: Session) -> str:
         if latest.is_repeat:
             parts.append(f"最近一次导入（补充记录 {len(session.additions)}）重复导入了"
                          "已有材料，没有新增证据，不改变上一条复验结论。")
-    if explanation.unknowns and not qr_pair:
+    if explanation.unknowns and not qr_pair and not closure:
         parts.append("仍未确认：" + explanation.unknowns[0])
     card = current_card(session)
     if card is not None:

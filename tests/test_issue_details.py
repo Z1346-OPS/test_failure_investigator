@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from investigator.explain import explain_report
-from investigator.export import render_markdown
+from investigator.export import render_markdown, short_conclusion
 from investigator.reports import load_report
 from investigator.session import Session
 from tests import synthetic
@@ -36,6 +36,7 @@ class IssueDetailsTests(unittest.TestCase):
         self.ingest(partial)
         before = self.details()
         self.assertEqual(before["status"], "open")
+        self.assertNotIn("关闭该问题没有待补检查", short_conclusion(self.session))
         self.assertEqual(before["origin"]["locator"], "issues[0]")
         scope = before["evidence"]["补充记录 1"]
         self.assertEqual(scope["verified_frame_counts"], [1])
@@ -57,6 +58,10 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertEqual(closed["resolved_by"], "补充记录 3")
         self.assertEqual(closed["history"][:len(before["history"])], before["history"])
         self.assertEqual(closed["latest_primary_comparison"]["result"], "范围内通过")
+        summary = short_conclusion(self.session)
+        self.assertIn("P01 可在本次帧 2 范围内关闭。关闭该问题没有待补检查。", summary)
+        self.assertIn("补充记录 3 核实了帧 2", summary)
+        self.assertIn("首次无法核实的原因仍未知", summary)
         evidence = closed["evidence"][closed["resolved_by"]]
         self.assertEqual(evidence["verified_frame_counts"], [2])
         self.assertEqual(evidence["review_id"], fixed.data["review_id"])
@@ -70,6 +75,7 @@ class IssueDetailsTests(unittest.TestCase):
         self.ingest(review((1,), issues=[missing(2)]))
         reopened = self.details()
         self.assertEqual(reopened["status"], "open")
+        self.assertNotIn("关闭该问题没有待补检查", short_conclusion(self.session))
         self.assertEqual(reopened["history"][-1]["event"], "重新出现")
         self.assertIsNone(reopened["last_issue_assessment"])
         self.assertEqual(before["status"], "open")
