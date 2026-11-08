@@ -11,6 +11,7 @@ from unittest import mock
 from . import synthetic  # noqa: F401
 
 from investigator.explain import explain_report
+from investigator.guides import current_card
 from investigator.export import (
     NOT_ATTACHED_NOTICE,
     ExportError,
@@ -130,6 +131,34 @@ class RenderTests(unittest.TestCase):
                 ), "addition.json")
                 session.add_addition(report, explain_report(report))
                 self.assertNotIn("逐字节一致", short_conclusion(session))
+
+    def test_qr_passed_guidance_reflects_whether_a_problem_was_registered(self) -> None:
+        for first_truth, expected, absent in (
+            ("not_provided", "两份记录均未登记问题", "登记的问题不再出现"),
+            ("incorrect", "登记的问题不再出现", "两份记录均未登记问题"),
+        ):
+            with self.subTest(first_truth=first_truth):
+                session = Session()
+                primary = load(synthetic.label_baseline_report(
+                    regions=(("full_image", "decoded", first_truth),),
+                    truth_status="provided" if first_truth == "incorrect" else "not_provided",
+                ), "primary.json")
+                session.load_primary(primary, explain_report(primary))
+                addition = load(synthetic.label_baseline_report(
+                    regions=(("full_image", "decoded", "correct"),), truth_status="provided",
+                ), "addition.json")
+                result = session.add_addition(addition, explain_report(addition))
+                self.assertEqual(result.recheck_result, "范围内通过")
+                card = current_card(session)
+                self.assertIn(expected, card.title)
+                session.record_suggestion(card)
+                text = render_markdown(session)
+                for heading in ("简明结论", "下一步", "建议过什么"):
+                    section = text.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+                    self.assertIn(expected, section)
+                self.assertNotIn(absent, text)
+                if first_truth == "not_provided":
+                    self.assertNotIn("旧的失败记录", text)
 
     def test_qr_homepage_keeps_full_image_and_roi_results_separate(self) -> None:
         session = Session()

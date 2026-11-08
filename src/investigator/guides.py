@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # 只用于类型提示，避免与 session 形成导入环
@@ -614,6 +614,13 @@ AFTER_PASSED = GuideStep(
     ),
 )
 
+QR_PASSED_WITHOUT_ISSUES = replace(
+    AFTER_PASSED,
+    title="本次检查范围内，两份记录均未登记问题",
+    actions=("保留主报告和补充报告，分别注明各自的解码结果与内容核验结论。",),
+    observe="答案来源、核验范围和仍未知的事项是否已写入交接说明。",
+)
+
 GENERIC_HANDOFF = GuideStep(
     guide_id="handoff",
     step_id="handoff.save",
@@ -820,13 +827,14 @@ def _addition_related(addition, step: GuideStep) -> str:
     return related
 
 
-def _addition_summary_card(addition, context: str) -> ActionCard:
+def _addition_summary_card(primary, addition, context: str) -> ActionCard:
     """没有具体动作时的汇总卡。"""
     from .session import (  # 延迟导入，避免模块加载环
         RECHECK_FAILED,
         RECHECK_INCOMPARABLE,
         RECHECK_INSUFFICIENT,
         RECHECK_PASSED,
+        registered_problem_labels,
     )
 
     note = _addition_note(addition)
@@ -842,6 +850,9 @@ def _addition_summary_card(addition, context: str) -> ActionCard:
         step = AFTER_INSUFFICIENT
     elif addition.recheck_result == RECHECK_PASSED:
         step = AFTER_PASSED
+        # “范围内通过”已排除补充报告登记问题；主报告也没有问题时只陈述本次记录。
+        if primary.report_type == "label_baseline" and not registered_problem_labels(primary):
+            step = QR_PASSED_WITHOUT_ISSUES
     else:
         step = AFTER_INSUFFICIENT
     return _card(step, context=context, note=note,
@@ -884,7 +895,7 @@ def _addition_card(session, addition, number: int) -> ActionCard:
         return _card(AFTER_OBSERVATION, context=context,
                      note=f"{declaration} {note}",
                      related=f"{AFTER_OBSERVATION.related} {step.title} 已由你记录完成。")
-    return _addition_summary_card(addition, context)
+    return _addition_summary_card(session.primary, addition, context)
 
 
 def _with_primary_detail(card: ActionCard, report) -> ActionCard:

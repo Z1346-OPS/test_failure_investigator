@@ -323,9 +323,9 @@ class Session:
                 self.primary, report, comparable, reason
             )
             if comparable and self.primary is not None:
-                before_keys = set(_problem_keys(self.primary))
+                before_keys = set(registered_problem_labels(self.primary))
                 addition.new_problem_keys = [
-                    key for key in _problem_keys(report) if key not in before_keys
+                    key for key in registered_problem_labels(report) if key not in before_keys
                 ]
         self.additions.append(addition)
         self._dirty = True
@@ -684,7 +684,7 @@ def _label_condition_conflict(primary: LoadedReport, addition: LoadedReport) -> 
     return None
 
 
-def _problem_keys(report: LoadedReport) -> dict[str, str]:
+def registered_problem_labels(report: LoadedReport) -> dict[str, str]:
     """从报告字段直接提取“问题”标识及可读说明；不使用解释文本做推断。"""
     keys: dict[str, str] = {}
     if report.report_type == "capture_task_review":
@@ -727,7 +727,7 @@ def _entry_state(report: LoadedReport) -> tuple[str, str] | None:
         if verification not in {"consistent", "inconsistent"}:
             return (RECHECK_INSUFFICIENT,
                     f"复核结论 {verification!r} 不在可评价范围内。")
-        if verification == "inconsistent" and not _problem_keys(report):
+        if verification == "inconsistent" and not registered_problem_labels(report):
             return (RECHECK_FAILED,
                     "新结果标记为不一致，但没有列出具体问题码；不能当作没有问题。")
         if verification == "consistent":
@@ -774,7 +774,7 @@ def _comparison_hazards(report: LoadedReport) -> list[str]:
 
 def new_problem_labels(addition: Addition) -> list[str]:
     """新结果中出现、原记录没有登记的问题（可读说明）。"""
-    details = _problem_keys(addition.report)
+    details = registered_problem_labels(addition.report)
     return [details[key] for key in addition.new_problem_keys if key in details]
 
 
@@ -873,8 +873,8 @@ def _recheck(primary, addition, comparable: bool, reason: str) -> tuple[str, str
     if primary_blocked:
         return RECHECK_INSUFFICIENT, "原始记录不能作为有效基线：" + primary_blocked[1]
 
-    before = _problem_keys(primary)
-    after = _problem_keys(addition)
+    before = registered_problem_labels(primary)
+    after = registered_problem_labels(addition)
 
     if after:
         names = list(dict.fromkeys(after.values()))
@@ -971,7 +971,7 @@ def _problem_scope(problem: ReviewProblem) -> str:
 
 def _review_problem_entries(report: LoadedReport) -> list[tuple[str, str, int | None, str]]:
     entries = []
-    labels = _problem_keys(report)
+    labels = registered_problem_labels(report)
     for index, issue in enumerate(report.get("issues", default=[]) or []):
         frame = issue.get("frame_count")
         # 不把未知/无效帧号修正为有效帧号；此类问题按全记录范围保守处理。
