@@ -12,7 +12,6 @@ class IssueDetailFrame(ttk.Frame):
         self.session = session
         self.on_select = on_select
         self.selected = None
-        problems = sorted(problems, key=lambda p: (p.resolved_by is not None, int(p.ident[1:])))
         ids = [p.ident for p in problems]
         current = selected if selected in ids else ids[0]
         if len(problems) > 1:

@@ -121,6 +121,10 @@ class ReviewProblem:
     resolved_by: str | None = None
     observed_reports: list[LoadedReport] = field(default_factory=list)
 
+    @property
+    def status(self) -> str:
+        return "open" if self.resolved_by is None else "closed_in_scope"
+
 
 @dataclass
 class Session:
@@ -448,6 +452,10 @@ class Session:
                 same.history.append((context, action, f"{label}；来源 {locator}"))
         return problems
 
+    def review_problems_by_priority(self) -> list[ReviewProblem]:
+        """未解决优先，同一状态内按问题编号排列。"""
+        return sorted(self.review_problems(), key=lambda p: (p.resolved_by is not None, int(p.ident[1:])))
+
     def unresolved_review_problems(self) -> list[ReviewProblem]:
         return [problem for problem in self.review_problems() if problem.resolved_by is None]
 
@@ -506,7 +514,7 @@ class Session:
         return {
             "schema_version": 1, "investigation_id": investigation_id, "issue_id": issue_id,
             "key": problem.key, "label": problem.label, "frame_count": problem.frame,
-            "status": "open" if problem.resolved_by is None else "closed_in_scope",
+            "status": problem.status,
             "origin": {"context": problem.origin_context, "locator": problem.locator},
             "resolved_by": problem.resolved_by, "history": history, "evidence": evidence,
             "last_issue_assessment": assessment, "latest_primary_comparison": latest,

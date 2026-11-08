@@ -346,7 +346,7 @@ class InvestigatorApp(tk.Tk):
         if report.report_type == "capture_task_review":
             self._section("当前调查")
             state, summary = self.session.investigation_summary()
-            problems = self.session.review_problems()
+            problems = self.session.review_problems_by_priority()
             panel = None
             if problems:
                 panel = IssueDetailFrame(self.body, self.session, problems, self._selected_issue,

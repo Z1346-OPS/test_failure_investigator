@@ -39,6 +39,16 @@ for path in ("round-1/02.json", "round-2/03.json"):
     print(detail["status"], detail["last_issue_assessment"], detail["next_step"])
 ```
 
+## 先列出问题
+
+在上面的 PowerShell 环境中运行：
+
+```powershell
+.\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py --list "$trial/round-1/01.json" "$trial/round-1/02.json"
+```
+
+输出的 `issues` 每项含 `issue_id`、`label`、`frame_count`、`status`，顺序与 Tk 列表一致。未解决问题置顶，同一状态内按编号排列。这组输入列出 P01 为 `open`；再追加 `round-2/03.json`，仍列出 P01，状态变为 `closed_in_scope`。用相同主报告和相同的追加顺序，将命令里的 `--list` 换成选定编号即可查证据及缺失项。各次命令创建独立调查。`issues=[]` 表示没有已登记的采集复核问题，退出码为 0；报告类型见 `primary_report_type`，QR 或定时采集的诊断请看各自的交接说明。
+
 ## 返回值
 
 | 字段 | 读取方法 |
