@@ -98,6 +98,32 @@ class RenderTests(unittest.TestCase):
         self.assertIn("新出现", conclusion)
         self.assertIn("无法核实", conclusion)
 
+    def test_open_failure_summary_scopes_followup_success_to_its_request(self):
+        primary = load(synthetic.capture_task_report(
+            camera_index=42, status="failed", stop_reason="open_failed", samples=0), "primary.json")
+        for status, samples, warnings, successful in (
+            ("completed", 2, [], True), ("completed", 0, [], False),
+            ("failed", 0, [], False), ("completed", 2, ["计数矛盾"], False),
+        ):
+            with self.subTest(status=status, samples=samples, warnings=warnings):
+                session = Session()
+                session.load_primary(primary, explain_report(primary))
+                self.assertNotIn("本次采集成功", short_conclusion(session))
+                report = load(synthetic.capture_task_report(
+                    run_id="b" * 32, camera_index=3, status=status, samples=samples,
+                    stop_reason="duration_reached" if status == "completed" else "open_failed"),
+                    "followup.json")
+                report.warnings.extend(warnings)
+                session.add_addition(report, explain_report(report))
+                for repeated in (False, True):
+                    if repeated:
+                        session.add_addition(primary, explain_report(primary))
+                    home = short_conclusion(session)
+                    self.assertEqual("本次采集成功" in home, successful)
+                    if successful:
+                        self.assertIn("编号 3 本次采集成功；编号 42 的原问题仍待可比复验，根因未知", home)
+                    self.assertIn("不可比较", home)
+
     def test_qr_homepage_distinguishes_original_and_latest_truth(self) -> None:
         primary = load(synthetic.label_baseline_report(), "primary.json")
         for state, wording in (("correct", "逐字节一致"), ("incorrect", "逐字节不一致")):

@@ -123,6 +123,7 @@ docs/                          方向、简化设计、流程与首轮指引（�
 
 ### 用 Python 查询采集问题
 
+从仓库根目录运行 `.\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py P01 主报告.json 补充报告.json` 即可查看该问题的关闭判断、证据位置和缺失检查。
 已有调查对象可调用 `session.get_issue_details(session.investigation_id, "P01")`。
 返回值是可 JSON 序列化的 v1 快照，包含当前状态、逐次历史、证据定位、缺失项及下一步。
 补充报告的核实帧集合、执行编号和 UTC 时间也写入新导出的交接说明。

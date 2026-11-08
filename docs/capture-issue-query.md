@@ -1,6 +1,22 @@
 # 采集问题详情查询 v1
 
-从助手仓库根目录运行，在已有调查中也可以直接调用同一方法。以下示例按本机走查包的顺序导入三份合成报告。
+在助手仓库根目录，用一个问题编号和按实际交接顺序排列的报告直接查询。第一份是主报告，后面是补充报告。
+
+```powershell
+$trial = 'D:\Projects\Python\camera-quality-diagnostics\docs\tasks\capture-trial-2026-11-08'
+.\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py P01 "$trial/round-1/01.json" "$trial/round-1/02.json"
+.\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py P01 "$trial/round-1/01.json" "$trial/round-1/02.json" "$trial/round-2/03.json"
+```
+
+| 接手人的问题 | 第一条命令 | 第二条命令 |
+| --- | --- | --- |
+| 能否关闭 P01？ | `status=open` | `status=closed_in_scope` |
+| 查哪份证据？ | `origin` 定位 01.json 的原问题；02.json 的 `verified_frame_counts=[1]`。 | `resolved_by` 指向补充记录 2。在该记录的 `evidence` 条目中，`verified_frames` 给出帧 2 的原数组位置和指标值对。 |
+| 还缺什么检查？ | `missing_evidence` 和 `next_step` 指出仍须核实第 2 帧。 | `missing_evidence=[]`，保留原失败与支持此次关闭的证据。 |
+
+命令向标准输出写入完整 v1 JSON。未解决的问题也是有效查询，退出码为 0。报告无效或问题编号无效时，错误写入标准错误，退出码为 2。本版问题编号对应采集复核报告登记的问题。
+
+已有调查可直接调用同一方法。以下示例使用同一组报告。
 
 ```python
 from pathlib import Path

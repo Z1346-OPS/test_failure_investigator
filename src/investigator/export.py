@@ -67,6 +67,22 @@ def short_conclusion(session: Session) -> str:
         if qr_pair:
             parts.append("主报告当时" + qr_content_conclusion(session.primary))
             parts.append("补充报告中，本次" + qr_content_conclusion(basis.report))
+        if (substantive and session.primary.report_type == "camera_timed_capture"
+                and session.primary.get("status") == "failed"
+                and session.primary.get("stop_reason") == "open_failed"
+                and basis.report.report_type == "camera_timed_capture"
+                and not basis.comparable):
+            followup = basis.report
+            counts = followup.get("counts")
+            if (followup.get("status") == "completed"
+                    and followup.get("stop_reason") == "duration_reached"
+                    and not followup.warnings and not followup.get("primary_error")
+                    and not followup.get("cleanup_errors")
+                    and 0 < counts["valid_frames"] <= counts["read_attempts"]
+                    and 0 < counts["samples_completed"] <= counts["valid_frames"]):
+                parts.append(f"编号 {followup.get('config', 'camera_index')} 本次采集成功；"
+                             f"编号 {session.primary.get('config', 'camera_index')} 的原问题"
+                             "仍待可比复验，根因未知。")
         if is_review:
             parts.append(f"仅与主报告的单次比较：{basis.recheck_result}；不代表调查全部问题已解决。")
         else:
