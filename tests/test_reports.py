@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from . import synthetic  # noqa: F401  (导入 tests 包即把 src/ 加入 sys.path)
 
@@ -173,6 +174,40 @@ class ReportLoadingTests(unittest.TestCase):
         with self.assertRaises(ReportError) as ctx:
             load_report(Path(r"\\server\share\report.json"))
         self.assertIn(ctx.exception.code, {"network_path", "not_found"})
+
+    def test_report_replaced_between_check_and_open_is_rejected(self) -> None:
+        path = self.write("selected.json", synthetic.capture_task_report())
+        replacement = self.write("other.json", synthetic.label_baseline_report())
+        original_open = Path.open
+
+        def replace_before_open(selected, *args, **kwargs):
+            if selected == path:
+                os.replace(replacement, selected)
+            return original_open(selected, *args, **kwargs)
+
+        with patch.object(Path, "open", replace_before_open):
+            with self.assertRaises(ReportError) as ctx:
+                load_report(path)
+        self.assertEqual(ctx.exception.code, "changed_during_read")
+
+    def test_report_under_linked_ancestor_is_rejected(self) -> None:
+        target = self.tmp / "target"
+        nested = target / "nested"
+        nested.mkdir(parents=True)
+        report_path = nested / "report.json"
+        report_path.write_text(json.dumps(synthetic.capture_task_report()), encoding="utf-8")
+        alias = self.tmp / "alias"
+        if os.name == "nt":
+            import _winapi
+            _winapi.CreateJunction(str(target), str(alias))
+        else:
+            alias.symlink_to(target, target_is_directory=True)
+        self.assertEqual(load_report(report_path).report_type, "camera_timed_capture")
+        for name in ("report.json", "missing.json"):
+            with self.subTest(name=name):
+                with self.assertRaises(ReportError) as ctx:
+                    load_report(alias / "nested" / name)
+                self.assertEqual(ctx.exception.code, "link_not_allowed")
 
     def test_symlink_rejected(self) -> None:
         target = self.write("target.json", synthetic.capture_task_report())

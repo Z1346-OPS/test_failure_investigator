@@ -14,14 +14,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from .explain import DECODE_TEXT, REVIEW_ISSUE_TEXT, STOP_REASON_TEXT, Explanation
 from .reports import (
     LoadedReport, label_validation_warnings, review_frame_verified,
-    review_validation_warnings, valid_sha256,
+    review_validation_warnings, valid_review_id, valid_sha256,
 )
 
 if TYPE_CHECKING:  # 只用于类型提示，避免与 guides 形成导入环
@@ -293,10 +293,17 @@ class Session:
 
         changes = _describe_changes(self.primary, self.primary_explanation, report, explanation)
 
-        # 相同字节重复导入：复用已有证据，不重复计数。
-        seen = {self.primary.source_sha256} if self.primary is not None else set()
-        seen.update(item.report.source_sha256 for item in self.additions)
-        is_repeat = report.source_sha256 in seen
+        seen = [item.report for item in self.additions]
+        if self.primary is not None:
+            seen.append(self.primary)
+        is_repeat = any(item.source_sha256 == report.source_sha256 for item in seen)
+        if report.report_type == "capture_task_review" and valid_review_id(report.get("review_id")):
+            for item in seen:
+                if item.report_type == report.report_type and item.get("review_id") == report.get("review_id"):
+                    if item.data == report.data:
+                        is_repeat = True
+                    elif "同一复核编号对应不同报告内容，执行记录冲突" not in report.warnings:
+                        report.warnings.append("同一复核编号对应不同报告内容，执行记录冲突")
 
         addition = Addition(
             report=report,
@@ -309,7 +316,7 @@ class Session:
         )
         if is_repeat:
             addition.recheck_result = RECHECK_INSUFFICIENT
-            addition.recheck_reason = ("重复导入的是同一份材料（内容摘要相同），没有新增证据；"
+            addition.recheck_reason = ("重复导入的是同一份材料或同一次复核，没有新增证据；"
                                        "请补充指定结果，或保存交接。")
         else:
             addition.recheck_result, addition.recheck_reason = _recheck(
@@ -407,14 +414,10 @@ class Session:
         if self.primary is None or self.primary.report_type != "capture_task_review":
             return []
         problems: list[ReviewProblem] = []
-        seen: set[str] = set()
         records = [("主报告", self.primary)] + [
             (f"补充记录 {index}", item.report)
-            for index, item in enumerate(self.additions, start=1)]
+            for index, item in enumerate(self.additions, start=1) if not item.is_repeat]
         for context, report in records:
-            if report.source_sha256 in seen:
-                continue
-            seen.add(report.source_sha256)
             if report.report_type != "capture_task_review":
                 continue
             entries = _review_problem_entries(report)
@@ -614,7 +617,7 @@ def _label_condition_conflict(primary: LoadedReport, addition: LoadedReport) -> 
     if first_provided and second_provided:
         first_sha = first_truth.get("sha256")
         second_sha = second_truth.get("sha256")
-        if isinstance(first_sha, str) and isinstance(second_sha, str) and first_sha != second_sha:
+        if valid_sha256(first_sha) and valid_sha256(second_sha) and first_sha.lower() != second_sha.lower():
             return "两份分析使用的独立答案标识不同，不能直接比较。"
     return None
 
@@ -831,6 +834,16 @@ def _recheck(primary, addition, comparable: bool, reason: str) -> tuple[str, str
             "原记录的问题涉及帧 " + "、".join(uncovered)
             + "，但新结果没有核实这些帧；不能把它们当作已消失。")
 
+    if primary.report_type == "capture_task_review":
+        gap = _review_order_gap(primary, addition)
+        if not gap and any(issue.get("frame_count") is None for issue in primary.get("issues")):
+            gap = _global_scope_gap(primary, addition)
+        if gap:
+            return RECHECK_INSUFFICIENT, gap
+    if primary.report_type == "label_baseline" and primary.get("known_truth", "status") == "provided":
+        if not valid_sha256(primary.get("known_truth", "sha256")):
+            return RECHECK_INSUFFICIENT, "原记录缺少有效答案摘要，无法证明是对同一答案的复验。"
+
     uncompared = _uncovered_truth_regions(primary, addition)
     if uncompared:
         return RECHECK_INSUFFICIENT, (
@@ -913,6 +926,50 @@ def _review_problem_entries(report: LoadedReport) -> list[tuple[str, str, int | 
     return entries
 
 
+def _review_order_gap(origin: LoadedReport, later: LoadedReport) -> str | None:
+    times = []
+    for item in (origin, later):
+        if not valid_review_id(item.get("review_id")):
+            return "缺少有效复核编号，不能确认是独立的后续复核。"
+        try:
+            moment = datetime.fromisoformat(item.get("reviewed_at_utc"))
+        except (TypeError, ValueError):
+            return "缺少有效 UTC 复核时间，无法确认先后。"
+        if moment.utcoffset() != timedelta(0):
+            return "复核时间未使用 UTC，无法确认先后。"
+        times.append(moment)
+    if origin.get("review_id") == later.get("review_id") or times[1] <= times[0]:
+        return "没有晚于问题记录的独立复核，不能确认问题已恢复。"
+    return None
+
+
+def _global_scope_gap(origin: LoadedReport, later: LoadedReport) -> str | None:
+    expected = origin.get("declared_frame_counts")
+    if expected is None:
+        # 历史 v1 仅在所有声明帧都有逐帧记录时才能还原原范围。
+        expected = [frame.get("frame_count") for frame in origin.get("frames", default=[])
+                    if isinstance(frame, dict)]
+        if len(expected) != origin.get("counts", "reported_samples"):
+            return "原记录未保留完整帧号，数量相同也无法证明覆盖原范围。"
+    if (not isinstance(expected, list) or not expected
+            or any(type(n) is not int or n < 1 for n in expected)
+            or len(set(expected)) != len(expected)):
+        return "原记录声明的帧号范围缺失或无效，不能关闭问题。"
+    numbers = set(expected)
+    recorded = origin.get("frames", default=[])
+    if any(not isinstance(f, dict) or type(f.get("frame_count")) is not int
+           or f["frame_count"] not in numbers for f in recorded):
+        return "原报告的逐帧记录与声明范围矛盾，不能关闭问题。"
+    original_count = origin.get("counts", "reported_samples")
+    if type(original_count) is not int or original_count < 1 or len(numbers) < original_count:
+        return "原报告缺少部分声明样本的帧号，无法确认完整覆盖。"
+    verified = {f["frame_count"] for f in later.get("frames", default=[]) if review_frame_verified(f)}
+    missing = sorted(numbers - verified)
+    if missing:
+        return "新结果缺少原范围内的帧：" + "、".join(map(str, missing))
+    return None
+
+
 def _review_problem_gap(problem: ReviewProblem, report: LoadedReport) -> str | None:
     relation = _assess_relation(problem.origin, report)
     if relation.same_subject is not True or relation.condition_conflict:
@@ -923,6 +980,11 @@ def _review_problem_gap(problem: ReviewProblem, report: LoadedReport) -> str | N
     hazards = _comparison_hazards(report)
     if hazards:
         return "新结果存在矛盾或未知条件，不能关闭问题：" + "；".join(hazards)
+    scopes = problem.observed_reports or [problem.origin]
+    for scope in scopes:
+        gap = _review_order_gap(scope, report)
+        if gap:
+            return gap
     frames = {frame["frame_count"] for frame in report.get("frames", default=[]) or []
               if review_frame_verified(frame)}
     issues = report.get("issues", default=[]) or []
@@ -935,14 +997,10 @@ def _review_problem_gap(problem: ReviewProblem, report: LoadedReport) -> str | N
             return f"缺少帧 {problem.frame} 摘要匹配且五项指标逐项一致的核实证据"
         return None
     # 无具体帧号的问题不因一帧正常而消失，要求原报告的范围也被完整覆盖。
-    scopes = problem.observed_reports or [problem.origin]
-    expected = {frame["frame_count"] for scope in scopes
-                for frame in scope.get("frames", default=[]) or []
-                if isinstance(frame, dict) and type(frame.get("frame_count")) is int}
-    counts = report.get("counts") or {}
-    largest_scope = max((scope.get("counts") or {}).get("reported_samples", 0) for scope in scopes)
-    if (report.get("verification_status") != "consistent" or issues or not frames
-            or not expected.issubset(frames)
-            or counts.get("reported_samples", -1) < largest_scope):
-        return "缺少覆盖原记录全部相关帧及计数范围、口径一致且无矛盾的复核证据"
+    if report.get("verification_status") != "consistent" or issues:
+        return "缺少覆盖原记录全部相关帧、口径一致且无矛盾的复核证据"
+    for scope in scopes:
+        gap = _global_scope_gap(scope, report)
+        if gap:
+            return gap
     return None

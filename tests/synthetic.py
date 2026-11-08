@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime, timedelta
+from itertools import count
+from uuid import uuid4
 from pathlib import Path
 
 SYNTHETIC_PAYLOAD = "SYNTHETIC-PAYLOAD-ALPHA"
@@ -81,6 +84,10 @@ def capture_task_report(*, run_id="run1" + "0" * 28, status="completed",
 
 # ---------------------------------------------------------------- 采集复核
 
+# 夹具中的独立复核按构造次序执行，时间可重复且不依赖系统时钟精度。
+_REVIEW_SEQUENCE = count()
+
+
 def review_metrics(*, different=False):
     """合成的、契约完整的五项保存值/重算值；不是实测数据。"""
     metrics = {name: ["100.0", "100.0"] for name in
@@ -103,6 +110,9 @@ def capture_review_report(*, run_id="run1" + "0" * 28, task_status="completed",
     return {
         "schema_version": 1,
         "report_type": "capture_task_review",
+        "review_id": uuid4().hex,
+        "reviewed_at_utc": (datetime(2026, 10, 17, tzinfo=UTC)
+                            + timedelta(seconds=next(_REVIEW_SEQUENCE))).isoformat(),
         "run_id": _hex(run_id),
         "task_status": task_status,
         "verification_status": verification_status,

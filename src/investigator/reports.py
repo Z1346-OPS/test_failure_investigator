@@ -120,36 +120,36 @@ def _check_limits(value, depth: int = 0) -> None:
 
 # ---------------------------------------------------------------- 路径检查
 
-def _check_path(path: Path) -> Path:
-    """校验真实路径、文件类型与来源位置；返回解析后的绝对路径。"""
-    raw = str(path)
-    if raw.startswith("\\\\") or raw.startswith("//"):
+def _check_path(path: Path) -> tuple[Path, os.stat_result]:
+    """逐级检查用户选择的路径；resolve 会提前跟随目录联接。"""
+    selected = path.absolute()
+    if any(str(candidate).startswith(("\\\\", "//")) for candidate in (path, selected)):
         raise ReportError("network_path", "不支持网络位置（UNC 路径）")
 
-    resolved = Path(path)
     try:
-        info = os.lstat(resolved)
+        for component in (*reversed(selected.parents), selected):
+            info = os.lstat(component)
+            attributes = getattr(info, "st_file_attributes", 0)
+            if stat.S_ISLNK(info.st_mode) or attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise ReportError("link_not_allowed", "报告路径中包含符号链接或重解析点（junction）")
     except FileNotFoundError as error:
-        raise ReportError("not_found", f"文件不存在：{resolved.name}") from error
+        raise ReportError("not_found", f"文件不存在：{selected.name}") from error
     except OSError as error:
         raise ReportError("unreadable", f"无法访问文件：{error}") from error
-
-    if stat.S_ISLNK(info.st_mode) or getattr(info, "st_reparse_tag", 0):
-        raise ReportError("link_not_allowed", "不支持符号链接或重解析点（junction）")
     if not stat.S_ISREG(info.st_mode):
         raise ReportError("not_a_file", "选择的不是普通文件")
 
-    if resolved.suffix.lower() not in ALLOWED_SUFFIXES:
+    if selected.suffix.lower() not in ALLOWED_SUFFIXES:
         allowed = "、".join(sorted(ALLOWED_SUFFIXES))
         raise ReportError(
-            "unsupported_suffix", f"只支持 {allowed} 文件，实际为 {resolved.suffix or '（无扩展名）'}"
+            "unsupported_suffix", f"只支持 {allowed} 文件，实际为 {selected.suffix or '（无扩展名）'}"
         )
     if info.st_size > MAX_FILE_BYTES:
         raise ReportError(
             "too_large",
             f"文件 {info.st_size} 字节超过上限 {MAX_FILE_BYTES} 字节",
         )
-    return resolved
+    return selected, info
 
 
 # ---------------------------------------------------------------- 字段校验
@@ -254,6 +254,14 @@ def review_validation_warnings(data: dict) -> list[str]:
     valid_numbers = [number for number in numbers if type(number) is int and number > 0]
     if len(valid_numbers) != len(frames) or len(set(valid_numbers)) != len(valid_numbers):
         warnings.append("frames 帧号缺失、不是正整数或重复，覆盖范围不可靠")
+    if "declared_frame_counts" in data:
+        declared_frames = data["declared_frame_counts"]
+        if (not isinstance(declared_frames, list) or not declared_frames
+                or any(type(n) is not int or n < 1 for n in declared_frames)
+                or len(set(declared_frames)) != len(declared_frames)
+                or not set(valid_numbers).issubset(declared_frames)
+                or (verification == "consistent" and set(valid_numbers) != set(declared_frames))):
+            warnings.append("declared_frame_counts 与逐帧记录矛盾，原范围无法核实")
     verified = sum(review_frame_verified(frame) for frame in frames)
     if isinstance(counts, dict):
         declared = counts.get("verified_frames")
@@ -322,6 +330,10 @@ def _validate_capture_review(data: dict) -> list[str]:
     return warnings
 
 
+def valid_review_id(value) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{32}", value) is not None
+
+
 def valid_sha256(value) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value) is not None
 
@@ -334,6 +346,8 @@ def label_validation_warnings(data: dict) -> list[str]:
         warnings.append("source.sha256 缺失或不是有效 SHA-256，图片身份未知，不能确认同图比较")
     truth = data.get("known_truth") or {}
     provided = isinstance(truth, dict) and truth.get("status") == "provided"
+    if provided and not valid_sha256(truth.get("sha256")):
+        warnings.append("known_truth.sha256 缺失或无效，跨报告复验无法确认使用同一答案")
     for index, summary in enumerate(data.get("decode_summaries") or []):
         check = summary.get("truth_check") or {}
         state = check.get("status")
@@ -392,16 +406,24 @@ _VALIDATORS = {
 
 def load_report(path) -> LoadedReport:
     """读取并校验一份报告；失败抛 :class:`ReportError`，不返回半成品。"""
-    resolved = _check_path(Path(path))
-
+    resolved, checked = _check_path(Path(path))
     try:
-        before = hashlib.sha256(resolved.read_bytes()).hexdigest()
-        raw = resolved.read_bytes()
+        with resolved.open("rb") as handle:
+            opened = os.fstat(handle.fileno())
+            if not os.path.samestat(checked, opened):
+                raise ReportError("changed_during_read", "打开的文件与已检查的文件不同，请重新选择")
+            first = handle.read(MAX_FILE_BYTES + 1)
+            handle.seek(0)
+            raw = handle.read(MAX_FILE_BYTES + 1)
+            _, current = _check_path(resolved)
+            if not os.path.samestat(opened, current):
+                raise ReportError("changed_during_read", "读取期间文件已被替换，请重新选择")
     except OSError as error:
         raise ReportError("unreadable", f"无法读取文件：{error}") from error
 
-    after = hashlib.sha256(raw).hexdigest()
-    if before != after:
+    if max(len(first), len(raw)) > MAX_FILE_BYTES:
+        raise ReportError("too_large", f"读取内容超过上限 {MAX_FILE_BYTES} 字节")
+    if first != raw:
         raise ReportError("changed_during_read", "读取过程中文件内容发生变化，请重新选择")
 
     try:
@@ -448,7 +470,7 @@ def load_report(path) -> LoadedReport:
 
     return LoadedReport(
         source_name=resolved.name,
-        source_sha256=after,
+        source_sha256=hashlib.sha256(raw).hexdigest(),
         size_bytes=len(raw),
         report_type=report_type,
         schema_version=version,
