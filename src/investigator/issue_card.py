@@ -76,8 +76,11 @@ def format_issue_card(detail: dict) -> IssueCardView:
                     for i, e in enumerate(events, 1))
     if closed:
         gap = missing if detail["missing_evidence"] else "关闭该问题没有待补检查。"
-        summary = f"{ident} {decision}。{gap}{basis}{note}"
+        summary = f"{ident} {decision}。{gap}依据为{location}。{basis}{note}"
     else:
-        summary = f"{ident} {decision}。依据为{location}。{missing}{note}"
+        finding = ""
+        if event["event"] in {"重新出现", "再次记录"}:
+            finding = basis + "。"
+        summary = f"{ident} {decision}。依据为{location}。{finding}{missing}{note}"
     return IssueCardView(decision, location, basis, missing, note, history,
                         _repeat_notice(detail), summary)
