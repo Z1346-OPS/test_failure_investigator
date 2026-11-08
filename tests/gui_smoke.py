@@ -1099,7 +1099,7 @@ def run(workdir: Path) -> int:
               issue["status"] == "open" and scope["verified_frame_counts"] == [1]
               and scope["review_id"] in lifecycle_export
               and scope["reviewed_at_utc"] in lifecycle_export
-              and "frames（按全部逐帧记录核实的帧号） | [1]" in lifecycle_export)
+              and "| 已核实的帧号 | verified_frame_counts=[1] |" in lifecycle_export)
         check("三份导入真实导出保留未解决问题与历史",
               "缺少帧 2" in lifecycle_export and "调查问题历史" in lifecycle_export
               and "仅与主报告的单次比较" in lifecycle_export)

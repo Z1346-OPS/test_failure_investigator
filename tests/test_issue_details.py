@@ -43,7 +43,7 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertEqual(scope["scope_locator"], "frames")
         self.assertIn("帧 2", before["missing_evidence"][0])
         self.assertIn("帧 2", before["next_step"])
-        self.assertIn("frames（按全部逐帧记录核实的帧号） | [1]", render_markdown(self.session))
+        self.assertIn("| 已核实的帧号 | verified_frame_counts=[1] |", render_markdown(self.session))
         self.ingest(partial)
         replay = self.details()
         self.assertTrue(replay["latest_primary_comparison"]["is_repeat"])
@@ -63,7 +63,7 @@ class IssueDetailsTests(unittest.TestCase):
         self.assertEqual(evidence["reviewed_at_utc"], fixed.data["reviewed_at_utc"])
         text = render_markdown(self.session)
         for value in ("reviewed_at_utc", evidence["review_id"], evidence["reviewed_at_utc"],
-                      evidence["source_sha256"], "frames[0] → 帧 2"):
+                      evidence["source_sha256"], "verified_frame_counts=[2]", "frames[0] → 帧 2"):
             self.assertIn(value, text)
         evidence["verified_frames"][0]["metrics"]["brightness"].clear()
         self.assertEqual(len(fixed.data["frames"][0]["metrics"]["brightness"]), 2)

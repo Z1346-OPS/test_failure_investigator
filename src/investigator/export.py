@@ -302,7 +302,8 @@ def _review_scope_rows(report) -> list[tuple[str, str]]:
     return [
         ("报告 SHA-256", scope["source_sha256"]),
         ("declared_frame_counts（声明范围）", str(declared) if valid else "未知"),
-        ("frames（按全部逐帧记录核实的帧号）", str(verified) if verified is not None else "未知"),
+        ("已核实的帧号", f"verified_frame_counts={verified}" if verified is not None
+         else "verified_frame_counts=null（未知）"),
         ("逐帧依据（摘要匹配且五项指标一致）", "、".join(
             f"{row['locator']} → 帧 {row['frame_count']}" for row in scope["verified_frames"]
         ) or "无可引用的核实帧"),

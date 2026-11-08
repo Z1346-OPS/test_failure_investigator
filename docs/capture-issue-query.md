@@ -38,6 +38,8 @@ for path in ("round-1/02.json", "round-2/03.json"):
 
 每份证据的 `verified_frame_counts` 来自整个 `frames` 数组。只有图片摘要匹配、五项保存值和重算值一致的帧才入选。每个 `verified_frames` 项保留原数组定位、帧号和五项值对，报告的警告与矛盾随证据保留。缺少 `frames` 时集合为 `null`，有空数组时集合为 `[]`。`declared_frame_counts` 表示报告声明的范围，缺字段保留 `null`。
 
+交接说明以 `verified_frame_counts=[1]` 展示核实集合，以 `frames[0] → 帧 1` 定位原报告中的对应记录。
+
 主案例先返回 `open`。补充记录 1 自身为 `consistent`，完整核实集合为 `[1]`，仍缺第 2 帧证据。随后返回 `closed_in_scope`，补充记录 2 核实了 `[1, 2]`。按 `origin.context` 和 `resolved_by` 找两份证据，对照不同的 `review_id`、严格递增的 `reviewed_at_utc`、同批次与口径，再查目标帧的指标对。对第 2 帧这一单项问题，满足上述条件、只核实第 2 帧的后续报告也足以关闭该项。
 
 调用仅查询当前内存会话。空白、非字符串编号抛 `ValueError`；未知调查、已替换的调查、未知问题或没有采集问题时抛 `KeyError`。无效输入不会改变调查。每次查询返回独立快照，调用者可保留前一轮结果。
