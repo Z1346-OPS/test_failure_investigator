@@ -134,6 +134,12 @@ docs/                          方向、简化设计、流程与首轮指引（�
 补充报告的核实帧集合、执行编号和 UTC 时间也写入新导出的交接说明。
 完整示例和错误约定见[采集问题详情查询](docs/capture-issue-query.md)。
 
+### 用 Python 核对单份 QR 报告
+
+从助手仓库运行 `.\.venv\Scripts\python.exe -B -X utf8 src/query_qr.py 分析报告.json --region full_image`。把 `full_image` 换为 `roi` 可查询该报告的人工选区。命令只读报告，按报告 SHA-256 和 `evidence_paths` 定位依据，输出所选区域的判断和待补检查。
+
+`correct` 和 `incorrect` 分别表示报告记录本次区域读码与独立答案逐字节一致或不一致。`unverified` 表示证据不足，`not_checked` 表示报告没有该区域。`missing_evidence` 针对本次内容判断。多份报告的原问题关闭判断仍通过调查会话核对。业务结果返回 0，参数、文件或报告类型错误返回 2。
+
 这是**简化版本的本地原型**，已完成离线测试与图形界面冒烟；
 **尚未进行用户试用，产品效果也未验证**。首版不做自动跨会话恢复、
 多文件证据包、历史中心或自动发送。

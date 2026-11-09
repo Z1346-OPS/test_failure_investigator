@@ -364,7 +364,7 @@ def valid_sha256(value) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value) is not None
 
 
-def label_validation_warnings(data: dict) -> list[str]:
+def label_validation_warnings(data: dict, *, region_index: int | None = None) -> list[str]:
     """QR 身份与比对边界；只核对报告声明，不重新解码或比对载荷。"""
     warnings = []
     source = data.get("source")
@@ -375,6 +375,8 @@ def label_validation_warnings(data: dict) -> list[str]:
     if provided and not valid_sha256(truth.get("sha256")):
         warnings.append("known_truth.sha256 缺失或无效，跨报告复验无法确认使用同一答案")
     for index, summary in enumerate(data.get("decode_summaries") or []):
+        if region_index is not None and index != region_index:
+            continue
         check = summary.get("truth_check") or {}
         state = check.get("status")
         decode = summary.get("decode") or {}

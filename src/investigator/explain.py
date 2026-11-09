@@ -107,24 +107,26 @@ def _base_technical(report: LoadedReport) -> list[tuple[str, str]]:
 
 # ---------------------------------------------------------------- QR（G1）
 
+def qr_region_finding(summary: dict, truth: str) -> str:
+    """单个区域的读码与内容核验，不推断其他区域。"""
+    region = summary["region"]
+    label = _region_label(region) if region.get("kind") in {"full_image", "roi"} else "未知区域"
+    state = summary["decode"]["status"]
+    result = summary["truth_check"]["status"]
+    if truth == "provided" and state == "decoded" and result in {"correct", "incorrect"}:
+        match = "一致" if result == "correct" else "不一致"
+        return f"{label}读出的内容与所给答案逐字节{match}"
+    if truth == "provided" and state == result == "ambiguous":
+        return f"{label}检测到多个候选码，已提供独立答案，仍缺可用于逐字节比对的单一读码"
+    return label + DECODE_TEXT.get(state, "的解码状态未知")
+
+
 def qr_content_conclusion(report: LoadedReport) -> str:
     """交接首页对单份 QR 报告自身的内容核验结论。"""
     if report.warnings or label_validation_warnings(report.data):
         return "记录存在校验提示，内容比对结论仍需复核。"
     truth = report.get("known_truth", "status")
-    findings = []
-    for summary in report.get("decode_summaries", default=[]):
-        region = summary["region"]
-        label = _region_label(region) if region.get("kind") in {"full_image", "roi"} else "未知区域"
-        state = summary["decode"]["status"]
-        result = summary["truth_check"]["status"]
-        if truth == "provided" and state == "decoded" and result in {"correct", "incorrect"}:
-            match = "一致" if result == "correct" else "不一致"
-            findings.append(f"{label}读出的内容与所给答案逐字节{match}")
-        elif truth == "provided" and state == result == "ambiguous":
-            findings.append(f"{label}检测到多个候选码，已提供独立答案，仍缺可用于逐字节比对的单一读码")
-        else:
-            findings.append(label + DECODE_TEXT.get(state, "的解码状态未知"))
+    findings = [qr_region_finding(summary, truth) for summary in report.get("decode_summaries", default=[])]
     if not findings:
         return "缺少区域结果，内容正确性未验证。"
     text = "；".join(findings)
