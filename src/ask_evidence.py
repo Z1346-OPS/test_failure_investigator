@@ -7,6 +7,7 @@ from pathlib import Path
 from investigator.answers import QUESTIONS, answer_question
 from investigator.explain import explain_report
 from investigator.model_api import ModelConfig, ModelError, explain_with_model
+from investigator.model_catalog import ModelCatalog, has_env_config
 from investigator.reports import ReportError, load_report
 from investigator.session import Session
 
@@ -31,7 +32,12 @@ def main():
         print(answer)
         if args.model_note:
             try:
-                note = explain_with_model(ModelConfig.from_env(), answer)
+                config = ModelConfig.from_env()
+                if not has_env_config():
+                    catalog = ModelCatalog()
+                    catalog.load()
+                    config = catalog.connection(config)
+                note = explain_with_model(config, answer)
             except ModelError as exc:
                 print(f"模型说明未生成：{exc} 已保留规则回答。", file=sys.stderr)
                 return 1

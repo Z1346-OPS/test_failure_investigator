@@ -28,7 +28,8 @@ from .guides import (
     current_card,
 )
 from .issue_panel import IssueDetailFrame
-from .model_api import ModelConfig
+from .model_api import ModelConfig, ModelError
+from .model_catalog import ModelCatalog
 from .reports import SUPPORTED_TYPES, TYPE_LABELS, ReportError, load_report
 from .session import Session, new_problem_labels
 
@@ -71,7 +72,14 @@ class InvestigatorApp(tk.Tk):
 
         self.session = Session()
         self.model_config = ModelConfig.from_env()
+        self.model_catalog = ModelCatalog()
         self._notice: str | None = None
+        try:
+            self.model_catalog.load()
+        except ModelError as exc:
+            self.model_catalog.selected = ""
+            self._notice = str(exc)
+        self.model_selection = tk.StringVar(self, value=self.model_catalog.selected)
         self._view = "welcome"          # welcome | supported | no_report | report
         self._technical_visible = False
         self._selected_issue = None

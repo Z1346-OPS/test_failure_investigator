@@ -149,19 +149,19 @@ QR 回答以主报告及最近一次非重复补充报告为依据。采集回�
 
 ### 使用自己的模型 API Key
 
-在 QR 或采集问题问答区点 **模型设置**。默认基础地址为 `https://open.bigmodel.cn/api/paas/v4`，默认模型为 `glm-5.3`。使用智谱时输入该平台的 API Key；使用其他兼容 Chat Completions 的服务时，同时改为该服务的基础地址和你有权限调用的模型 ID。密钥输入框遮蔽内容，点击“应用”后设置仅在本次运行有效。设置窗口可用 ×、Esc 或“取消”退出。重复打开会回到同一窗口。[智谱接口文档](https://docs.bigmodel.cn/cn/guide/develop/openai/introduction)
+1. 在 QR 或采集问题的问答区，从 **当前模型** 选一个 DeepSeek 模型，点 **模型设置**。首次可沿用“个人”，也可填写“工作”等账号名，勾选需要的模型，输入 Key 并点 **应用**。助手把 Key 存入当前 Windows 用户在本机的凭据管理器。
+2. 下拉列表按“服务商 · 模型（账号）”显示。DeepSeek Flash 和 V4 Pro 共用同一账号的 Key，不同账号分别保存。重启后会恢复上次的选择。更新 Key 时选中该账号，重新填写并应用；只调整模型时可留空 Key。
+3. 提问后，点 **用当前选中模型生成说明** 对应的按钮，才会向 DeepSeek 发送屏幕上的规则回答。说明单独显示。失败时可继续使用离线规则。模型列表和上次选择保存在 `%LOCALAPPDATA%\TestFailureInvestigator\models`，JSON 仅含显示名称及模型选择。[DeepSeek 模型与地址](https://api-docs.deepseek.com/zh-cn/)
 
-先提问，看到规则回答后点 **发送此回答给模型**。该操作发送当前显示的回答，其中可能包含报告文件名、证据位置和批次信息。附加说明单独显示；复制交接摘要和导出调查记录继续使用程序判断。认证失败、超时或响应无效时会显示原因并保留规则回答。
+之前仅存于旧窗口内存的 Key 需要在新版填一次。选择“自定义兼容接口（本次运行）”仍可沿用原有的基础地址、模型 ID 和临时密钥。设置窗口可用 ×、Esc 或“取消”关闭，重复打开会回到同一窗口。自定义服务不会使用已保存的 DeepSeek 密钥。
 
-命令行可通过 `INVESTIGATOR_API_KEY` 提供密钥，`INVESTIGATOR_BASE_URL` 和 `INVESTIGATOR_MODEL` 可覆盖默认服务和模型。PowerShell 7 可以在当前终端用隐藏输入设置密钥：
+命令行在没有显式模型环境变量时也使用已保存的选择：
 
 ```powershell
-$env:INVESTIGATOR_API_KEY = Read-Host '模型服务 API Key' -MaskInput
 .\.venv\Scripts\python.exe -B -X utf8 src/ask_evidence.py 主报告.json 补充报告.json --model-note
-Remove-Item Env:INVESTIGATOR_API_KEY
 ```
 
-`--model-note` 请求失败时返回 1，规则回答仍输出到标准输出。未指定该选项时继续离线回答。
+显式设置 `INVESTIGATOR_API_KEY`、`INVESTIGATOR_BASE_URL` 或 `INVESTIGATOR_MODEL` 时，命令行优先使用原有的环境变量配置。`--model-note` 请求失败时返回 1，规则回答仍输出到标准输出。未指定该选项时继续离线回答。
 
 ### 用 Python 核对单份 QR 报告
 

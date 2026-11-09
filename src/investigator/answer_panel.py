@@ -26,12 +26,22 @@ class AnswerPanel(ttk.Frame):
         self.entry.pack(side="left", fill="x", expand=True, padx=4)
         ttk.Button(entry_row, text="提问", command=self._submit).pack(side="left")
         self.entry.bind("<Return>", self._submit)
-        ttk.Button(bar, text="模型设置", command=self._settings).pack(side="left", padx=4)
-        self.model_button = ttk.Button(self, text="发送此回答给模型", command=self._send_to_model)
+        app = self.winfo_toplevel()
+        models = ttk.Frame(self)
+        models.pack(fill="x", pady=(3, 0))
+        ttk.Label(models, text="当前模型").pack(side="left")
+        self.model_list = ttk.Combobox(models, state="readonly", width=32)
+        self.model_list.pack(side="left", padx=4)
+        self.model_list.bind("<<ComboboxSelected>>", self._select_model)
+        ttk.Button(models, text="模型设置", command=self._settings).pack(side="left")
+        self.model_button = ttk.Button(self, command=self._send_to_model)
         self.model_note = ttk.Label(self, justify="left", wraplength=630)
         self._generation = 0
         self._busy = False
         self._timer = None
+        self._selection = app.model_selection
+        self._trace = self._selection.trace_add("write", self._sync_models)
+        self._sync_models()
         self.bind("<Destroy>", self._destroyed)
         self.result = ttk.Label(self, justify="left", wraplength=630)
         self.copy_controls = None
@@ -64,6 +74,25 @@ class AnswerPanel(ttk.Frame):
                 self.notice.configure(text="")
                 self.copy_controls.pack(anchor="w")
 
+    def _sync_models(self, *_):
+        catalog = self.winfo_toplevel().model_catalog
+        self.model_list.configure(values=catalog.labels)
+        self.model_list.set(catalog.selected)
+        self.model_button.configure(text=f"用{catalog.selected or '所选模型'}生成说明")
+        self._generation += 1
+        self.model_note.pack_forget()
+
+    def _select_model(self, _event=None):
+        app = self.winfo_toplevel()
+        try:
+            app.model_catalog.select(self.model_list.get())
+        except ModelError as exc:
+            self.model_list.set(app.model_catalog.selected)
+            self.model_note.configure(text=str(exc))
+            self.model_note.pack(anchor="w")
+            return
+        app.model_selection.set(app.model_catalog.selected)
+
     def _settings(self):
         app = self.winfo_toplevel()
         return configure_model(app, self._settings_applied)
@@ -76,17 +105,26 @@ class AnswerPanel(ttk.Frame):
     def _send_to_model(self):
         if self._busy or not self.current_text:
             return
-        config = self.winfo_toplevel().model_config
+        app = self.winfo_toplevel()
+        target = app.model_catalog.selected
+        answer = self.current_text
+        try:
+            config = app.model_catalog.connection(app.model_config)
+        except ModelError as exc:
+            self.model_note.configure(text=str(exc))
+            self.model_note.pack(anchor="w")
+            return
         if not config.api_key:
             generation = self._generation
 
             def send_after_apply():
-                if self.winfo_exists() and self._generation == generation:
+                # 成功保存设置会触发一次列表刷新，其他问题或模型切换使这次发送失效。
+                if (self.winfo_exists() and self._generation == generation + 1
+                        and self.current_text == answer and app.model_catalog.selected == target):
                     self._send_to_model()
 
-            configure_model(self.winfo_toplevel(), send_after_apply)
+            configure_model(app, send_after_apply)
             return
-        answer = self.current_text
         generation = self._generation
         messages = Queue()
         self._busy = True
@@ -110,16 +148,18 @@ class AnswerPanel(ttk.Frame):
                 return
             self._busy = False
             self.model_button.state(["!disabled"])
-            if self._generation == generation and self.winfo_toplevel().model_config == config:
+            if self._generation == generation and app.model_catalog.selected == target:
                 self.model_note.configure(text=note)
 
         Thread(target=request, daemon=True).start()
         self._timer = self.after(100, poll)
 
     def _destroyed(self, event):
-        if event.widget is self and self._timer is not None:
-            self.after_cancel(self._timer)
-            self._timer = None
+        if event.widget is self:
+            self._selection.trace_remove("write", self._trace)
+            if self._timer is not None:
+                self.after_cancel(self._timer)
+                self._timer = None
 
     def _copy(self):
         try:

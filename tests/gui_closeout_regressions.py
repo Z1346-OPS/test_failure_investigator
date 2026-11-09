@@ -141,6 +141,31 @@ class CloseoutGuiRegressions(unittest.TestCase):
             clear.assert_not_called()
         self.assertEqual(self.errors, [])
 
+    def test_saving_a_missing_key_does_not_send_a_superseded_question(self):
+        from investigator.answer_panel import AnswerPanel
+        from investigator.model_catalog import Choice, ModelCatalog
+        from tests.test_model_catalog import FakeVault
+
+        vault = FakeVault()
+        catalog = ModelCatalog(self.root / "models", lambda: vault)
+        catalog.select(Choice("个人", "deepseek-flash").label)
+        self.app.model_catalog = catalog
+        self.app.model_selection.set(catalog.selected)
+        self.load(synthetic.label_baseline_report(), "qr.json")
+        panel = next(w for w in widgets(self.app) if isinstance(w, AnswerPanel))
+        panel.show("依据在哪里？")
+        with mock.patch("investigator.answer_panel.explain_with_model") as send:
+            panel.model_button.invoke()
+            dialog = self.app.children["model_settings"]
+            panel.show("还缺什么检查？")
+            key = [w for w in widgets(dialog) if w.winfo_class() == "TEntry"][-1]
+            key.insert(0, "test-placeholder")
+            button(dialog, "应用").invoke()
+            self.app.update()
+            self.assertFalse(panel._busy)
+            send.assert_not_called()
+            self.assertNotIn("model_settings", self.app.children)
+
     def test_model_settings_reopens_one_window_and_cancel_never_applies(self):
         from investigator.model_settings import configure_model
         applied = mock.Mock()
