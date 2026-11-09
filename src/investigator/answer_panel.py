@@ -1,9 +1,13 @@
 """在调查或问题卡中选择固定问题，显示可复制的离线回答。"""
 
+from queue import Empty, Queue
+from threading import Thread
 import tkinter as tk
 from tkinter import ttk
 
 from .answers import QUESTIONS
+from .model_api import ModelError, explain_with_model
+from .model_settings import configure_model
 
 
 class AnswerPanel(ttk.Frame):
@@ -22,6 +26,13 @@ class AnswerPanel(ttk.Frame):
         self.entry.pack(side="left", fill="x", expand=True, padx=4)
         ttk.Button(entry_row, text="提问", command=self._submit).pack(side="left")
         self.entry.bind("<Return>", self._submit)
+        ttk.Button(bar, text="模型设置", command=self._settings).pack(side="left", padx=4)
+        self.model_button = ttk.Button(self, text="发送此回答给模型", command=self._send_to_model)
+        self.model_note = ttk.Label(self, justify="left", wraplength=630)
+        self._generation = 0
+        self._busy = False
+        self._timer = None
+        self.bind("<Destroy>", self._destroyed)
         self.result = ttk.Label(self, justify="left", wraplength=630)
         self.copy_controls = None
         if show_copy:
@@ -35,6 +46,9 @@ class AnswerPanel(ttk.Frame):
         return "break"
 
     def show(self, question):
+        self._generation += 1
+        self.model_note.pack_forget()
+        self.model_button.pack_forget()
         self.result.pack(anchor="w", pady=(5, 2))
         try:
             self.current_text = self.get_answer(question)
@@ -45,9 +59,62 @@ class AnswerPanel(ttk.Frame):
                 self.copy_controls.pack_forget()
         else:
             self.result.configure(text=self.current_text)
+            self.model_button.pack(anchor="w")
             if self.copy_controls is not None:
                 self.notice.configure(text="")
                 self.copy_controls.pack(anchor="w")
+
+    def _settings(self):
+        app = self.winfo_toplevel()
+        config = configure_model(app, app.model_config)
+        if config is not None:
+            app.model_config = config
+            self._generation += 1
+            self.model_note.pack_forget()
+
+    def _send_to_model(self):
+        if self._busy or not self.current_text:
+            return
+        config = self.winfo_toplevel().model_config
+        if not config.api_key:
+            self._settings()
+            config = self.winfo_toplevel().model_config
+            if not config.api_key:
+                return
+        answer = self.current_text
+        generation = self._generation
+        messages = Queue()
+        self._busy = True
+        self.model_button.state(["disabled"])
+        self.model_note.configure(text="正在生成模型说明…")
+        self.model_note.pack(anchor="w")
+
+        def request():
+            try:
+                note = "模型补充说明（供参考）\n" + explain_with_model(config, answer)
+            except ModelError as exc:
+                note = f"模型说明未生成：{exc} 已保留规则回答。"
+            messages.put(note)
+
+        def poll():
+            self._timer = None
+            try:
+                note = messages.get_nowait()
+            except Empty:
+                self._timer = self.after(100, poll)
+                return
+            self._busy = False
+            self.model_button.state(["!disabled"])
+            if self._generation == generation and self.winfo_toplevel().model_config == config:
+                self.model_note.configure(text=note)
+
+        Thread(target=request, daemon=True).start()
+        self._timer = self.after(100, poll)
+
+    def _destroyed(self, event):
+        if event.widget is self and self._timer is not None:
+            self.after_cancel(self._timer)
+            self._timer = None
 
     def _copy(self):
         try:

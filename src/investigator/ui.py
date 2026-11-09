@@ -28,6 +28,7 @@ from .guides import (
     current_card,
 )
 from .issue_panel import IssueDetailFrame
+from .model_api import ModelConfig
 from .reports import SUPPORTED_TYPES, TYPE_LABELS, ReportError, load_report
 from .session import Session, new_problem_labels
 
@@ -69,6 +70,7 @@ class InvestigatorApp(tk.Tk):
         self.geometry("{}x{}".format(*WINDOW_START))
 
         self.session = Session()
+        self.model_config = ModelConfig.from_env()
         self._notice: str | None = None
         self._view = "welcome"          # welcome | supported | no_report | report
         self._technical_visible = False
