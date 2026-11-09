@@ -5,11 +5,9 @@ from dataclasses import dataclass
 from .explain import DECODE_TEXT
 from .export import scrub
 from .issue_card import format_issue_card
+from .questions import QUESTIONS, parse_question
 from .qr_query import original_issue_status, query_qr_region
 from .session import RECHECK_INSUFFICIENT, Session, registered_problem_labels
-
-
-QUESTIONS = ("原问题能关吗？", "依据在哪里？", "还缺什么检查？")
 
 
 @dataclass(frozen=True)
@@ -112,6 +110,15 @@ def qr_answer(session: Session) -> EvidenceAnswer:
     if session.additions and session.additions[-1].is_repeat:
         evidence.append(f"补充记录 {len(session.additions)} 重复导入，没有新增证据。")
     return EvidenceAnswer(decision, " ".join(evidence), " ".join(dict.fromkeys(gaps)) or "无。")
+
+
+def answer_question(session: Session, question: str, issue_id: str | None = None) -> str:
+    qr = session.primary is not None and session.primary.report_type == "label_baseline"
+    intents, target = parse_question(question, issue_id, qr=qr)
+    answer = answer_session(session, target)
+    if QUESTIONS[0] in intents:
+        return answer.text()
+    return "\n".join(answer.text(intent) for intent in intents)
 
 
 def answer_session(session: Session, issue_id: str | None = None) -> EvidenceAnswer:

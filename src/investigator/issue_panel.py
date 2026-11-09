@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from .answer_panel import AnswerPanel
-from .answers import capture_answer
+from .answers import answer_question
 from .issue_card import format_issue_card, history_source
 
 
@@ -91,10 +91,13 @@ class IssueDetailFrame(ttk.Frame):
             disclosure.configure(text=f"{verb}状态历史（{len(view.history)}）")
         disclosure = ttk.Button(controls, text=f"展开状态历史（{len(view.history)}）", command=toggle)
         disclosure.pack(side="left")
-        questions = AnswerPanel(self.card, lambda: capture_answer(detail), show_copy=False)
+        questions = AnswerPanel(self.card, lambda q: answer_question(self.session, q, ident), show_copy=False)
         questions.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(2, 0))
 
         def copy():
+            if questions.current_text == "":
+                copied.configure(text="请先选择或输入可回答的问题")
+                return
             try:
                 self.clipboard_clear()
                 self.clipboard_append(questions.current_text or view.summary)

@@ -122,6 +122,25 @@ class CloseoutGuiRegressions(unittest.TestCase):
                     copy.assert_called_once_with(expected)
         self.assertEqual(self.errors, [])
 
+    def test_typed_question_updates_visible_answer_and_clears_it_after_bad_input(self):
+        from investigator.answer_panel import AnswerPanel
+        from investigator.answers import answer_question
+
+        self.load(review((), issues=[missing(1), missing(2)]), "two.json")
+        panel = next(w for w in widgets(self.app) if isinstance(w, AnswerPanel))
+        panel.entry.insert(0, "P01 还要补查什么？")
+        button(panel, "提问").invoke()
+        self.assertEqual(panel.result.cget("text"), answer_question(self.app.session, "还缺什么检查？", "P01"))
+        panel.entry.delete(0, "end")
+        panel.entry.insert(0, "P02 还要补查什么？")
+        button(panel, "提问").invoke()
+        self.assertIn("当前选择的是 P01", panel.result.cget("text"))
+        owner = next(w for w in widgets(self.app) if isinstance(w, IssueDetailFrame))
+        with mock.patch.object(owner, "clipboard_clear") as clear:
+            button(owner, "复制交接摘要").invoke()
+            clear.assert_not_called()
+        self.assertEqual(self.errors, [])
+
     def test_help_round_trip_preserves_report_draft(self):
         self.draft()
         self.app._set_view("no_report")
