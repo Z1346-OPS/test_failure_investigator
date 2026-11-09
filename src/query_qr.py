@@ -1,11 +1,12 @@
-"""按区域查询单份 QR 报告中的内容判断、证据位置和待补检查。"""
+"""查询 QR 报告中的区域证据，可与指定主报告核对复验结果。"""
 
 import argparse
 import json
 from pathlib import Path
 
-from investigator.explain import qr_region_finding
+from investigator.explain import explain_report, qr_region_finding
 from investigator.reports import LoadedReport, ReportError, label_validation_warnings, load_report
+from investigator.session import RECHECK_PASSED, Session, registered_problem_labels
 
 
 def query_qr_region(report: LoadedReport, kind: str) -> dict:
@@ -58,24 +59,11 @@ def query_qr_region(report: LoadedReport, kind: str) -> dict:
     if state != "decoded":
         gaps.append("需要在所选区域取得可用于比对的单一有效读码。")
     warnings = label_validation_warnings(report.data, region_index=index)
-    if kind == "roi" and any(type(region.get(k)) is not int or region[k] < minimum
-                             for k, minimum in (("x", 0), ("y", 0), ("width", 1), ("height", 1))):
-        warnings.append("选区坐标或尺寸无效，需核实所选区域。")
-    elif kind == "roi":
-        for offset, size, bound in (("x", "width", "analysis_width"), ("y", "height", "analysis_height")):
-            limit = report.get("preprocessing", bound)
-            if type(limit) is int and region[offset] + region[size] > limit:
-                warnings.append("选区超出分析图像的范围，需核对选区坐标。")
-                break
     if report.get("status") not in {"completed", "completed_with_errors"}:
         warnings.append("报告的执行状态不支持确认本次核验结果。")
     if truth == "provided" and check in {"correct", "incorrect"}:
         if "symbols" in item["decode"]:
             evidence.append(f"{prefix}.decode.symbols")
-        symbols = item["decode"].get("symbols")
-        if not (isinstance(symbols, list) and len(symbols) == 1 and isinstance(symbols[0], dict)
-                and symbols[0].get("valid") is True):
-            warnings.append("缺少唯一有效候选码的记录。")
     if warnings:
         gaps.extend(warnings)
         result["judgment"] = "所选区域的内容尚未核实，需核对待补检查。"
@@ -88,15 +76,65 @@ def query_qr_region(report: LoadedReport, kind: str) -> dict:
     return result
 
 
+def compare_qr_reports(primary: LoadedReport, followup: LoadedReport, kind: str) -> dict:
+    primary_region = query_qr_region(primary, kind)
+    followup_region = query_qr_region(followup, kind)
+    session = Session()
+    session.load_primary(primary, explain_report(primary))
+    addition = session.add_addition(followup, explain_report(followup))
+    if not registered_problem_labels(primary):
+        closure = "no_registered_issue"
+    elif addition.recheck_result == RECHECK_PASSED:
+        closure = "closed_in_scope"
+    else:
+        closure = "unresolved"
+    return {
+        "schema_version": 1,
+        "primary_region": primary_region,
+        "followup_region": followup_region,
+        "report_comparison": {
+            "comparable": addition.comparable, "comparison_reason": addition.comparison_reason,
+            "is_repeat": addition.is_repeat, "recheck_result": addition.recheck_result,
+            "recheck_reason": addition.recheck_reason, "original_issue_status": closure,
+            "primary_evidence_paths": comparison_paths(primary),
+            "followup_evidence_paths": comparison_paths(followup),
+        },
+    }
+
+
+def comparison_paths(report: LoadedReport) -> list[str]:
+    paths = ["status", "analysis_id", "decode_summaries", "known_truth.status"]
+    if "analyzed_at" in report.data:
+        paths.append("analyzed_at")
+    for group in ("source", "known_truth"):
+        if report.get(group, "sha256") is not None:
+            paths.append(f"{group}.sha256")
+    for index, item in enumerate(report.data["decode_summaries"]):
+        prefix = f"decode_summaries[{index}]"
+        paths.extend([f"{prefix}.region", f"{prefix}.decode.status", f"{prefix}.truth_check.status"])
+        if "comparison" in item["truth_check"]:
+            paths.append(f"{prefix}.truth_check.comparison")
+        if "symbols" in item["decode"]:
+            paths.append(f"{prefix}.decode.symbols")
+    return paths
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
     parser.add_argument("report", type=Path, help="一次 QR 分析的 JSON 报告")
     parser.add_argument("--region", choices=("full_image", "roi"), required=True)
+    parser.add_argument("--primary", type=Path, help="与本次报告比较的原始 QR 报告")
     args = parser.parse_args()
+    path = args.report
     try:
-        result = query_qr_region(load_report(args.report), args.region)
+        followup = load_report(path)
+        if args.primary is None:
+            result = query_qr_region(followup, args.region)
+        else:
+            path = args.primary
+            result = compare_qr_reports(load_report(path), followup, args.region)
     except ReportError as exc:
-        parser.error(f"{args.report.name} [{exc.code}] {exc.message}")
+        parser.error(f"{path.name} [{exc.code}] {exc.message}")
     except ValueError as exc:
         parser.error(str(exc))
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))

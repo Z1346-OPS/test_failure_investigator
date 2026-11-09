@@ -304,6 +304,8 @@ class Session:
         if self.primary is not None:
             seen.append(self.primary)
         is_repeat = any(item.source_sha256 == report.source_sha256 for item in seen)
+        if report.report_type == "label_baseline" and not is_repeat:
+            is_repeat = any(item.data == report.data for item in seen)
         if report.report_type == "capture_task_review" and valid_review_id(report.get("review_id")):
             for item in seen:
                 if item.report_type == report.report_type and item.get("review_id") == report.get("review_id"):
@@ -945,6 +947,19 @@ def _recheck(primary, addition, comparable: bool, reason: str) -> tuple[str, str
         return RECHECK_INSUFFICIENT, (
             "原记录中以下区域与独立答案不一致：" + "、".join(uncompared)
             + "；新结果没有完成这些区域的比对，不能当作已恢复。")
+
+    if before and primary.report_type == "label_baseline":
+        first_id = (primary.get("analysis_id") or "").strip().casefold()
+        later_id = (addition.get("analysis_id") or "").strip().casefold()
+        if not first_id or not later_id or first_id == later_id:
+            return RECHECK_INSUFFICIENT, "缺少可区分两次执行的分析编号，需要独立的后续分析。"
+        try:
+            first = datetime.fromisoformat(primary.get("analyzed_at"))
+            later = datetime.fromisoformat(addition.get("analyzed_at"))
+        except (TypeError, ValueError):
+            return RECHECK_INSUFFICIENT, "缺少有效分析时间，无法确认复验先后。"
+        if first.utcoffset() is None or later.utcoffset() is None or later <= first:
+            return RECHECK_INSUFFICIENT, "需要一份可确认晚于原问题的独立分析。"
 
     if before:
         return RECHECK_PASSED, ("同一对象上原记录登记的问题在新结果中不再出现；"

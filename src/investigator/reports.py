@@ -364,6 +364,19 @@ def valid_sha256(value) -> bool:
     return isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value) is not None
 
 
+def _roi_warning(region: dict, preprocessing: dict) -> str | None:
+    if region.get("kind") != "roi":
+        return None
+    for offset, size, bound in (("x", "width", "analysis_width"), ("y", "height", "analysis_height")):
+        start, length = region.get(offset), region.get(size)
+        if type(start) is not int or start < 0 or type(length) is not int or length < 1:
+            return "选区坐标或尺寸无效，需核实所选区域。"
+        limit = preprocessing.get(bound) if isinstance(preprocessing, dict) else None
+        if type(limit) is int and start + length > limit:
+            return "选区超出分析图像的范围，需核对选区坐标。"
+    return None
+
+
 def label_validation_warnings(data: dict, *, region_index: int | None = None) -> list[str]:
     """QR 身份与比对边界；只核对报告声明，不重新解码或比对载荷。"""
     warnings = []
@@ -377,6 +390,9 @@ def label_validation_warnings(data: dict, *, region_index: int | None = None) ->
     for index, summary in enumerate(data.get("decode_summaries") or []):
         if region_index is not None and index != region_index:
             continue
+        roi_warning = _roi_warning(summary.get("region") or {}, data.get("preprocessing") or {})
+        if roi_warning:
+            warnings.append(roi_warning)
         check = summary.get("truth_check") or {}
         state = check.get("status")
         decode = summary.get("decode") or {}
@@ -390,6 +406,10 @@ def label_validation_warnings(data: dict, *, region_index: int | None = None) ->
         if state in {"correct", "incorrect"}:
             if decode.get("status") != "decoded":
                 warnings.append(f"区域 {index + 1} 的答案比对与未成功解码的状态矛盾")
+            symbols = decode.get("symbols")
+            if not (isinstance(symbols, list) and len(symbols) == 1 and isinstance(symbols[0], dict)
+                    and symbols[0].get("valid") is True):
+                warnings.append("缺少唯一有效候选码的记录。")
             if check.get("comparison") != "exact_payload_bytes":
                 warnings.append(f"区域 {index + 1} 未记录逐字节比对口径，不能确认内容核验结论")
     return warnings

@@ -138,7 +138,9 @@ docs/                          方向、简化设计、流程与首轮指引（�
 
 从助手仓库运行 `.\.venv\Scripts\python.exe -B -X utf8 src/query_qr.py 分析报告.json --region full_image`。把 `full_image` 换为 `roi` 可查询该报告的人工选区。命令只读报告，按报告 SHA-256 和 `evidence_paths` 定位依据，输出所选区域的判断和待补检查。
 
-`correct` 和 `incorrect` 分别表示报告记录本次区域读码与独立答案逐字节一致或不一致。`unverified` 表示证据不足，`not_checked` 表示报告没有该区域。`missing_evidence` 针对本次内容判断。多份报告的原问题关闭判断仍通过调查会话核对。业务结果返回 0，参数、文件或报告类型错误返回 2。
+`correct` 和 `incorrect` 分别表示报告记录本次区域读码与独立答案逐字节一致或不一致。`unverified` 表示证据不足，`not_checked` 表示报告没有该区域。`missing_evidence` 针对本次内容判断。业务结果返回 0，参数、文件或报告类型错误返回 2。
+
+追加 `--primary 原报告.json` 可将位置参数指定的补充报告与主报告比较。例如 `src/query_qr.py 补充报告.json --region roi --primary 原报告.json`。`primary_region` 和 `followup_region` 各自说明所选区域的结果，`report_comparison` 使用调查会话核对两份报告的全部区域，给出可比性、复验判断和证据位置。`original_issue_status` 为 `closed_in_scope`（原登记问题在本次范围内可关闭）、`unresolved`（原登记问题仍未解决）或 `no_registered_issue`（原报告没有登记问题）。关闭已登记的 QR 问题需要独立的分析编号，以及晚于原问题且可确认时区的分析时间。
 
 这是**简化版本的本地原型**，已完成离线测试与图形界面冒烟；
 **尚未进行用户试用，产品效果也未验证**。首版不做自动跨会话恢复、

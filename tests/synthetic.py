@@ -154,9 +154,13 @@ def _summary(index, kind, decode_status, truth_status, roi=None):
     }
 
 
-def label_baseline_report(*, analysis_id="analysis1", regions=(("full_image", "decoded", "not_provided"),),
+_QR_SEQUENCE = count()
+
+
+def label_baseline_report(*, analysis_id=None, regions=(("full_image", "decoded", "not_provided"),),
                           status="completed", image_sha=SYNTHETIC_IMAGE_SHA,
                           truth_status="not_provided", truth_source=None):
+    sequence = next(_QR_SEQUENCE)
     summaries = [
         _summary(index, kind, decode_status, truth_check, roi=roi)
         for index, (kind, decode_status, truth_check, roi) in enumerate(
@@ -184,9 +188,9 @@ def label_baseline_report(*, analysis_id="analysis1", regions=(("full_image", "d
     return {
         "schema_version": 2,
         "report_type": "label_baseline",
-        "analysis_id": _hex(analysis_id),
+        "analysis_id": _hex(analysis_id) if analysis_id is not None else f"{sequence:032x}",
         "status": status,
-        "analyzed_at": "2026-10-17T00:00:00+00:00",
+        "analyzed_at": (datetime(2026, 10, 17, tzinfo=UTC) + timedelta(seconds=sequence)).isoformat(),
         "analysis_duration_seconds": 0.5,
         "provenance": {"implementation_version": "local-label-analysis-2", "source_sha256": {}},
         "warnings": [],
