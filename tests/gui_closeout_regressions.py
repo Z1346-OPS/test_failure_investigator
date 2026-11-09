@@ -102,6 +102,26 @@ class CloseoutGuiRegressions(unittest.TestCase):
         self.assertFalse(any(isinstance(w, IssueDetailFrame) for w in self.app.body.winfo_children()))
         self.assertEqual(self.errors, [])
 
+    def test_offline_question_matches_visible_and_copied_text(self):
+        from investigator.answer_panel import AnswerPanel
+        from investigator.answers import answer_session
+
+        cases = [(synthetic.label_baseline_report(), "qr.json", None),
+                 (review((), issues=[missing(2)]), "capture.json", "P01")]
+        for data, name, issue in cases:
+            with self.subTest(name=name):
+                self.load(data, name)
+                button(self.app, "原问题能关吗？").invoke()
+                self.app.update()
+                panel = next(w for w in widgets(self.app) if isinstance(w, AnswerPanel))
+                expected = answer_session(self.app.session, issue).text()
+                self.assertEqual(panel.result.cget("text"), expected)
+                owner = panel if issue is None else next(w for w in widgets(self.app) if isinstance(w, IssueDetailFrame))
+                with mock.patch.object(owner, "clipboard_clear"), mock.patch.object(owner, "clipboard_append") as copy:
+                    button(self.app, "复制交接摘要").invoke()
+                    copy.assert_called_once_with(expected)
+        self.assertEqual(self.errors, [])
+
     def test_help_round_trip_preserves_report_draft(self):
         self.draft()
         self.app._set_view("no_report")

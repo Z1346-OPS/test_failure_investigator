@@ -13,6 +13,8 @@ from dataclasses import replace
 from pathlib import Path
 from tkinter import filedialog, font as tkfont, ttk
 
+from .answer_panel import AnswerPanel
+from .answers import answer_session
 from .explain import explain_report, unknown_impact
 from .export import ExportError, render_markdown, save_markdown
 from .guides import (
@@ -358,6 +360,9 @@ class InvestigatorApp(tk.Tk):
                 if panel is not None:
                     panel.destroy()
                 self._label(self.body, f"{state}：{summary}", style="Notice.TLabel")
+        elif report.report_type == "label_baseline":
+            self._section("证据问答")
+            AnswerPanel(self.body, lambda: answer_session(self.session)).pack(fill="x")
         # 1. 目前发现
         self._section("原主报告的发现" if report.report_type == "capture_task_review" else "目前发现")
         for item in explanation.findings:

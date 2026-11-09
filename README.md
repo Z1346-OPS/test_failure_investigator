@@ -134,6 +134,19 @@ docs/                          方向、简化设计、流程与首轮指引（�
 补充报告的核实帧集合、执行编号和 UTC 时间也写入新导出的交接说明。
 完整示例和错误约定见[采集问题详情查询](docs/capture-issue-query.md)。
 
+### 离线证据问答
+
+在 QR 调查的“证据问答”或采集问题详情中点击“原问题能关吗？”即可阅读关闭判断、报告引用和待补检查。也可只问“依据在哪里？”或“还缺什么检查？”。点击“复制交接摘要”复制当前显示的回答。切换采集问题或导入新材料后可重新选择问题。
+
+从助手根目录运行以下命令，输出与窗口使用同一套规则。第一份文件是主报告，其余文件按导入顺序追加。多个采集问题时必须指定编号。
+
+```powershell
+.\.venv\Scripts\python.exe -B -X utf8 src/ask_evidence.py 原报告.json 补充报告.json
+.\.venv\Scripts\python.exe -B -X utf8 src/ask_evidence.py 原报告.json 补充报告.json --issue P01 --question "还缺什么检查？"
+```
+
+QR 回答以主报告及最近一次非重复补充报告为依据。采集回答读取所选问题的完整调查历史。三个固定问题均可离线运行。
+
 ### 用 Python 核对单份 QR 报告
 
 从助手仓库运行 `.\.venv\Scripts\python.exe -B -X utf8 src/query_qr.py 分析报告.json --region full_image`。把 `full_image` 换为 `roi` 可查询该报告的人工选区。命令只读报告，按报告 SHA-256 和 `evidence_paths` 定位依据，输出所选区域的判断和待补检查。
