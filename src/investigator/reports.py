@@ -378,7 +378,10 @@ def label_validation_warnings(data: dict) -> list[str]:
         check = summary.get("truth_check") or {}
         state = check.get("status")
         decode = summary.get("decode") or {}
-        if provided and state not in {"correct", "incorrect"}:
+        # 上游在没有唯一读码时将 ambiguous 同时记入解码和比对结果。
+        ambiguous = (state == "ambiguous" and decode.get("status") == "ambiguous"
+                     and check.get("comparison") == "exact_payload_bytes")
+        if provided and state not in {"correct", "incorrect"} and not ambiguous:
             warnings.append(f"区域 {index + 1} 的独立答案比对尚未完成或状态未知（{state!r}）")
         if not provided and state in {"correct", "incorrect"}:
             warnings.append(f"区域 {index + 1} 声称完成答案比对，但独立答案未提供")

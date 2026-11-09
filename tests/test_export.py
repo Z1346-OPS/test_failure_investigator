@@ -148,6 +148,21 @@ class RenderTests(unittest.TestCase):
                     self.assertFalse(any(line.startswith("没有独立答案") for line in gaps))
                     self.assertIn("补充记录 1 内容核验：整图读出的内容与所给答案" + wording + "。", gaps)
 
+    def test_qr_handoff_explains_why_supplied_answer_cannot_resolve_ambiguity(self) -> None:
+        session = Session()
+        primary = load(synthetic.label_baseline_report(
+            regions=(("full_image", "ambiguous", "not_provided"),)), "primary.json")
+        session.load_primary(primary, explain_report(primary))
+        report = load(synthetic.label_baseline_report(
+            regions=(("full_image", "ambiguous", "ambiguous"),), truth_status="provided"),
+            "with-answer.json")
+        followup = session.add_addition(report, explain_report(report))
+        self.assertEqual(followup.recheck_result, "未通过")
+        self.assertIn("补充报告中，本次整图检测到多个候选码", short_conclusion(session))
+        self.assertIn("已提供独立答案，仍缺可用于逐字节比对的单一读码", short_conclusion(session))
+        self.assertTrue(any("仍缺可用于逐字节比对的单一读码" in line
+                            for line in session.remaining_dimension()))
+
     def test_qr_homepage_does_not_claim_a_match_without_valid_evidence(self) -> None:
         primary = load(synthetic.label_baseline_report(), "primary.json")
         for decode, check, truth in (("decoded", "not_provided", "not_provided"),

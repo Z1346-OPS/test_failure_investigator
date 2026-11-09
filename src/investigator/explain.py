@@ -121,6 +121,8 @@ def qr_content_conclusion(report: LoadedReport) -> str:
         if truth == "provided" and state == "decoded" and result in {"correct", "incorrect"}:
             match = "一致" if result == "correct" else "不一致"
             findings.append(f"{label}读出的内容与所给答案逐字节{match}")
+        elif truth == "provided" and state == result == "ambiguous":
+            findings.append(f"{label}检测到多个候选码，已提供独立答案，仍缺可用于逐字节比对的单一读码")
         else:
             findings.append(label + DECODE_TEXT.get(state, "的解码状态未知"))
     if not findings:
