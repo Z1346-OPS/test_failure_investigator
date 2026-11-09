@@ -149,7 +149,7 @@ QR 回答以主报告及最近一次非重复补充报告为依据。采集回�
 
 ### 使用自己的模型 API Key
 
-在 QR 或采集问题问答区点 **模型设置**。默认基础地址为 `https://open.bigmodel.cn/api/paas/v4`，默认模型为 `glm-5.3`。使用智谱时输入该平台的 API Key；使用其他兼容 Chat Completions 的服务时，同时改为该服务的基础地址和你有权限调用的模型 ID。密钥输入框遮蔽内容，点击“应用”后设置仅在本次运行有效。[智谱接口文档](https://docs.bigmodel.cn/cn/guide/develop/openai/introduction)
+在 QR 或采集问题问答区点 **模型设置**。默认基础地址为 `https://open.bigmodel.cn/api/paas/v4`，默认模型为 `glm-5.3`。使用智谱时输入该平台的 API Key；使用其他兼容 Chat Completions 的服务时，同时改为该服务的基础地址和你有权限调用的模型 ID。密钥输入框遮蔽内容，点击“应用”后设置仅在本次运行有效。设置窗口可用 ×、Esc 或“取消”退出。重复打开会回到同一窗口。[智谱接口文档](https://docs.bigmodel.cn/cn/guide/develop/openai/introduction)
 
 先提问，看到规则回答后点 **发送此回答给模型**。该操作发送当前显示的回答，其中可能包含报告文件名、证据位置和批次信息。附加说明单独显示；复制交接摘要和导出调查记录继续使用程序判断。认证失败、超时或响应无效时会显示原因并保留规则回答。
 

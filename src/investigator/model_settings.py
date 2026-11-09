@@ -6,10 +6,20 @@ from tkinter import ttk
 from .model_api import ModelConfig, ModelError
 
 
-def configure_model(parent, current):
-    dialog = tk.Toplevel(parent)
+def configure_model(parent, on_apply=None):
+    dialog = parent.children.get("model_settings")
+    if dialog is not None:
+        dialog.on_apply = on_apply
+        dialog.deiconify()
+        dialog.lift()
+        dialog.focus_force()
+        return dialog
+
+    current = parent.model_config
+    dialog = tk.Toplevel(parent, name="model_settings")
     dialog.title("模型 API 设置")
-    dialog.transient(parent)
+    dialog.on_apply = on_apply
+    dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
     body = ttk.Frame(dialog, padding=14)
     body.pack(fill="both", expand=True)
     body.columnconfigure(1, weight=1)
@@ -27,10 +37,8 @@ def configure_model(parent, current):
     ttk.Label(body, text=hint).grid(row=3, columnspan=2, sticky="w", pady=4)
     error = ttk.Label(body, foreground="#953c00")
     error.grid(row=4, columnspan=2, sticky="w")
-    result = None
 
     def apply():
-        nonlocal result
         base, model, key = (entry.get().strip() for entry in entries)
         if not key and base.rstrip("/") == current.base_url.strip().rstrip("/"):
             key = current.api_key
@@ -40,15 +48,18 @@ def configure_model(parent, current):
         except ModelError as exc:
             error.configure(text=str(exc))
             return
-        result = config
+        parent.model_config = config
+        callback = dialog.on_apply
         dialog.destroy()
+        if callback is not None:
+            callback()
 
     buttons = ttk.Frame(body)
     buttons.grid(row=5, columnspan=2, sticky="e")
     ttk.Button(buttons, text="应用", command=apply).pack(side="left", padx=3)
     ttk.Button(buttons, text="取消", command=dialog.destroy).pack(side="left")
     dialog.bind("<Escape>", lambda _event: dialog.destroy())
-    dialog.grab_set()
-    entries[2].focus_set()
-    dialog.wait_window()
-    return result
+    dialog.tk.call("tk::PlaceWindow", dialog._w, "widget", parent._w)
+    dialog.lift()
+    entries[2].focus_force()
+    return dialog

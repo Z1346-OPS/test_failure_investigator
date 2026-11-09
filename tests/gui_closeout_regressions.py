@@ -141,6 +141,56 @@ class CloseoutGuiRegressions(unittest.TestCase):
             clear.assert_not_called()
         self.assertEqual(self.errors, [])
 
+    def test_model_settings_reopens_one_window_and_cancel_never_applies(self):
+        from investigator.model_settings import configure_model
+        applied = mock.Mock()
+        initial = self.app.model_config
+        for how in ("cancel", "escape", "window_close"):
+            with self.subTest(how=how):
+                dialog = configure_model(self.app, applied)
+                self.app.update()
+                self.assertIsNone(self.app.grab_current())
+                self.assertFalse(str(dialog.transient()))
+                self.assertIs(configure_model(self.app, applied), dialog)
+                key_entry = [w for w in widgets(dialog) if w.winfo_class() == "TEntry"][-1]
+                key_entry.insert(0, "test-only")
+                if how == "cancel":
+                    button(dialog, "取消").invoke()
+                elif how == "escape":
+                    key_entry.focus_force()
+                    self.app.update()
+                    key_entry.event_generate("<Escape>")
+                else:
+                    dialog.tk.call(dialog.protocol("WM_DELETE_WINDOW"))
+                self.app.update()
+                self.assertFalse(dialog.winfo_exists())
+                self.assertIs(self.app.model_config, initial)
+                applied.assert_not_called()
+
+    def test_closing_main_window_with_settings_open_keeps_unsaved_guard(self):
+        from investigator.model_settings import configure_model
+        from investigator.ui import InvestigatorApp
+        app = InvestigatorApp()
+        app.session.add_note("合成说明")
+        pending = mock.Mock()
+        try:
+            dialog = configure_model(app, pending)
+            app.update()
+            app.after(100, lambda: button(app, "返回").invoke())
+            app.on_close()
+            self.assertTrue(dialog.winfo_viewable())
+            self.assertIsNone(app.grab_current())
+            app.after(100, lambda: button(app, "放弃本次内容").invoke())
+            app.on_close()
+            with self.assertRaises(ui.tk.TclError):
+                app.winfo_exists()
+            pending.assert_not_called()
+        finally:
+            try:
+                app.destroy()
+            except ui.tk.TclError:
+                pass
+
     def test_help_round_trip_preserves_report_draft(self):
         self.draft()
         self.app._set_view("no_report")

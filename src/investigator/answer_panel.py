@@ -66,9 +66,10 @@ class AnswerPanel(ttk.Frame):
 
     def _settings(self):
         app = self.winfo_toplevel()
-        config = configure_model(app, app.model_config)
-        if config is not None:
-            app.model_config = config
+        return configure_model(app, self._settings_applied)
+
+    def _settings_applied(self):
+        if self.winfo_exists():
             self._generation += 1
             self.model_note.pack_forget()
 
@@ -77,10 +78,14 @@ class AnswerPanel(ttk.Frame):
             return
         config = self.winfo_toplevel().model_config
         if not config.api_key:
-            self._settings()
-            config = self.winfo_toplevel().model_config
-            if not config.api_key:
-                return
+            generation = self._generation
+
+            def send_after_apply():
+                if self.winfo_exists() and self._generation == generation:
+                    self._send_to_model()
+
+            configure_model(self.winfo_toplevel(), send_after_apply)
+            return
         answer = self.current_text
         generation = self._generation
         messages = Queue()

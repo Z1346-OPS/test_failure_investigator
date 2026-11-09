@@ -900,8 +900,7 @@ class InvestigatorApp(tk.Tk):
 
     @staticmethod
     def _write_guard_choice(dialog: tk.Toplevel, result: dict):
-        """草稿选择框：返回值写回 result['choice'] 后关窗并恢复主窗口模态。"""
-        owner = dialog.master
+        """把结果写回 result['choice'] 后关闭提示窗口。"""
 
         def finish(choice: str) -> None:
             result["choice"] = choice
@@ -910,10 +909,6 @@ class InvestigatorApp(tk.Tk):
             except tk.TclError:
                 pass
             dialog.destroy()
-            try:
-                owner.grab_set()
-            except tk.TclError:
-                pass
 
         dialog.protocol("WM_DELETE_WINDOW", lambda: finish("cancel"))
         return finish
@@ -926,7 +921,6 @@ class InvestigatorApp(tk.Tk):
         否则预览和保存对话框可能被挡在下面、用户无法点击。
         """
         ttk.Label(dialog, text=message, padding=(14, 14, 14, 6)).pack(anchor="w")
-        owner = dialog.master
 
         def finish(value: bool) -> None:
             result["ok"] = value
@@ -935,10 +929,6 @@ class InvestigatorApp(tk.Tk):
             except tk.TclError:
                 pass
             dialog.destroy()
-            try:
-                owner.grab_set()
-            except tk.TclError:
-                pass
 
         dialog.protocol("WM_DELETE_WINDOW", lambda: finish(False))
         return finish
