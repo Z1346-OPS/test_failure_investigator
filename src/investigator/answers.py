@@ -7,7 +7,7 @@ from .export import scrub
 from .issue_card import format_issue_card
 from .questions import QUESTIONS, parse_question
 from .qr_query import original_issue_status, query_qr_region
-from .session import RECHECK_INSUFFICIENT, Session, registered_problem_labels
+from .session import RECHECK_INSUFFICIENT, RECHECK_PASSED, Session, registered_problem_labels
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ def capture_answer(detail: dict) -> EvidenceAnswer:
     return EvidenceAnswer(f"{detail['issue_id']} {view.decision}。", " ".join(references), missing)
 
 
-def _qr_observations(report, context):
+def _qr_observations(report, context, *, passing_followup=False):
     evidence, gaps = [], []
     for kind in dict.fromkeys(row["region"]["kind"] for row in report.data["decode_summaries"]):
         if kind not in {"full_image", "roi"}:
@@ -60,6 +60,8 @@ def _qr_observations(report, context):
         state = result.get("decode_status")
         if result["status"] == "unverified" and state in {"decode_error", "not_decoded", "execution_error", "conflict"}:
             finding = f"{label}{DECODE_TEXT[state]}，内容未验证。"
+        if passing_followup and result["status"] == "correct":
+            finding += f"本次{label}内容比对已完成，没有待补检查。"
         evidence.append(f"{context} {report.source_name} / {path}：{finding}")
         if result["status"] == "incorrect":
             gaps.append(f"{label}需取得与独立答案逐字节一致的后续复验。")
@@ -89,7 +91,9 @@ def qr_answer(session: Session) -> EvidenceAnswer:
         if len(substantive) > 1:
             decision = f"按主报告与{context}的比较，" + decision
         if later.report_type == "label_baseline":
-            new_evidence, new_gaps = _qr_observations(later, context)
+            new_evidence, new_gaps = _qr_observations(
+                later, context, passing_followup=addition.comparable and addition.recheck_result == RECHECK_PASSED,
+            )
             evidence.extend(new_evidence)
         else:
             evidence.append(f"{context} {later.source_name} / report_type 为 {later.report_type}。")
@@ -106,7 +110,6 @@ def qr_answer(session: Session) -> EvidenceAnswer:
             gaps.append(addition.recheck_reason)
         if status == "closed_in_scope":
             evidence.append(f"{primary.source_name} 与 {later.source_name} / analysis_id、analyzed_at 确认独立复验及先后。")
-            gaps = []
     if session.additions and session.additions[-1].is_repeat:
         evidence.append(f"补充记录 {len(session.additions)} 重复导入，没有新增证据。")
     return EvidenceAnswer(decision, " ".join(evidence), " ".join(dict.fromkeys(gaps)) or "无。")

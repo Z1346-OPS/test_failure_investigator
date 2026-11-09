@@ -67,8 +67,10 @@ def query_qr_region(report: LoadedReport, kind: str) -> dict:
         result["judgment"] = qr_region_finding(item, truth) + "。"
         if truth == "provided" and state == "decoded" and check in {"correct", "incorrect"}:
             result["status"] = check
+        elif truth == "not_provided":
+            result["judgment"] += "该报告当时未提供独立答案，内容正确性尚未验证。"
         elif truth != "provided":
-            result["judgment"] += "本次内容正确性尚未验证。"
+            result["judgment"] += "该报告的独立答案状态未知，内容正确性尚未验证。"
     return result
 
 

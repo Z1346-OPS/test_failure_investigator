@@ -45,6 +45,24 @@ class EvidenceAnswerTests(unittest.TestCase):
         self.assertIn("未登记问题", answer.decision)
         self.assertEqual(answer.missing, "无。")
         self.assertIn("逐字节一致", answer.evidence)
+        self.assertIn("当时未提供独立答案", answer.text(QUESTIONS[1]))
+        self.assertIn("本次整图内容比对已完成，没有待补检查", answer.text(QUESTIONS[1]))
+
+    def test_closed_read_failure_without_truth_still_needs_content_verification(self):
+        primary = synthetic.label_baseline_report(regions=(("full_image", "not_decoded", "not_provided"),))
+        answer = answer_session(investigation(primary, synthetic.label_baseline_report()))
+        self.assertIn("范围内关闭", answer.decision)
+        self.assertIn("独立答案", answer.missing)
+        self.assertNotIn("没有待补检查", answer.evidence)
+
+    def test_verified_other_image_does_not_clear_original_gap(self):
+        primary = synthetic.label_baseline_report()
+        other = synthetic.label_baseline_report(image_sha=synthetic.OTHER_IMAGE_SHA, truth_status="provided",
+                                               regions=(("full_image", "decoded", "correct"),))
+        answer = answer_session(investigation(primary, other))
+        self.assertIn("不可比较", answer.evidence)
+        self.assertNotIn("没有待补检查", answer.evidence)
+        self.assertIn("可比复验", answer.missing)
 
     def test_old_correct_report_does_not_close_original_problem(self):
         old_good = synthetic.label_baseline_report(truth_status="provided",
