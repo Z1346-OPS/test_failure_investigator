@@ -2,7 +2,7 @@
 
 日期：2026-10-16（Asia/Shanghai）。
 状态：设计交付；尚未实现调查工具、案例重建、模型调用或效果评测。
-项目根：D:\AIProjects\projects\test_failure_investigator。
+项目根：<本仓库根>。
 文档对象：开发者和评测者。**本文含首个案例的原因与修复信息，禁止作为被评测模型的输入或工具可读材料。**
 
 ## 1. Planning：本轮任务与决策
@@ -14,7 +14,7 @@
 5. **依赖**：设计不需要 API 或 Python 环境。实现需要 Python 3.12、经过核验的依赖和可靠失败包；真实模型阶段还需要选定供应商、确认账户/API/工具调用能力。
 6. **本轮核验**：检查本文件结构、材料路径与行号、Markdown 围栏/相对链接；运行 git status、git diff 与对新增文件的逐块 diff 检查；对本轮读取的摄像头文件做 SHA-256 前后比较。项目尚无 build/test/lint/type-check 或可运行入口，本轮不以运行测试冒充文档验证。
 
-用户后续授权在 D:\AIProjects\projects 下建立项目并继续工作，实际采用其纠正后的下划线目录名；所有项目命令均明确使用该根目录为工作目录，不在 Documents 中创建项目。设计中的模块名、目录和命令均为未来约定，不表示已经存在。
+用户后续授权在 <本机项目目录> 下建立项目并继续工作，实际采用其纠正后的下划线目录名；所有项目命令均明确使用该根目录为工作目录，不在 Documents 中创建项目。设计中的模块名、目录和命令均为未来约定，不表示已经存在。
 
 ## 2. 产品问题、范围与非目标
 
@@ -32,7 +32,7 @@ v0 只做本地命令行、一个摄像头案例、只读文本取证、JSON/Mar
 
 ## 3. 已核实的材料与证据边界
 
-以下是设计者的只读核实，不是未来模型运行的证据编号，也不是本轮测试结果。摄像头根目录为 D:\Projects\Python\camera-quality-diagnostics。
+以下是设计者的只读核实，不是未来模型运行的证据编号，也不是本轮测试结果。摄像头根目录为 <摄像头项目仓库>。
 
 | 依据 | 本轮核实 | 限制 |
 | --- | --- | --- |
@@ -521,4 +521,4 @@ CLI 自动分配新 runs 目录；case 从批准目录登记，不接任意工�
 - [Python 3.12 pathlib](https://docs.python.org/3.12/library/pathlib.html#pathlib.Path.resolve)：resolve 解析链接与 ..；is_relative_to 仅做词法比较，边界须先解析。
 - [Pydantic strict mode](https://docs.pydantic.dev/latest/concepts/strict_mode/) 与 [extra 配置](https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.extra)：支持严格验证与拒绝额外字段，不保证语义正确或权限安全。
 
-本地材料均只读：摄像头 AGENTS.md、src/review_capture.py、tests/test_review_capture.py、docs/tasks/phase-4.5-capture-review.md、docs/tasks/phase-4.5-verification-2026-10-15.md（相关索引）、.github/workflows/tests.yml、requirements.txt，以及第 4.2 节导入闭包和 check_frame_evidence.py。背景计划为 C:\Users\zex\Documents\ChatGPT\project2\learning-materials\测试失败分析Agent_开发计划_2026-10-15.md；最新用户范围优先。
+本地材料均只读：摄像头 AGENTS.md、src/review_capture.py、tests/test_review_capture.py、docs/tasks/phase-4.5-capture-review.md、docs/tasks/phase-4.5-verification-2026-10-15.md（相关索引）、.github/workflows/tests.yml、requirements.txt，以及第 4.2 节导入闭包和 check_frame_evidence.py。背景计划为 <用户目录下的背景资料>；最新用户范围优先。

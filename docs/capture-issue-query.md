@@ -3,7 +3,7 @@
 在助手仓库根目录，用一个问题编号和按实际交接顺序排列的报告直接查询。第一份是主报告，后面是补充报告。
 
 ```powershell
-$trial = 'D:\Projects\Python\camera-quality-diagnostics\docs\tasks\capture-trial-2026-11-08'
+$trial = '<摄像头项目仓库>\docs\tasks\capture-trial-2026-11-08'
 .\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py P01 "$trial/round-1/01.json" "$trial/round-1/02.json"
 .\.venv\Scripts\python.exe -B -X utf8 src/query_issue.py P01 "$trial/round-1/01.json" "$trial/round-1/02.json" "$trial/round-2/03.json"
 ```
@@ -27,7 +27,7 @@ from investigator.explain import explain_report
 from investigator.reports import load_report
 from investigator.session import Session
 
-trial = Path("D:/Projects/Python/camera-quality-diagnostics/docs/tasks/capture-trial-2026-11-08")
+trial = Path("<摄像头项目仓库>/docs/tasks/capture-trial-2026-11-08")
 session = Session()
 primary = load_report(trial / "round-1/01.json")
 session.load_primary(primary, explain_report(primary))

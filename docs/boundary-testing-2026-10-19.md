@@ -8,7 +8,7 @@
 
 ## 0. 起点、基线与环境
 
-- 项目根：`D:\AIProjects\projects\test_failure_investigator`；分支 `main` 尚无首次提交，
+- 项目根：`<本仓库根>`；分支 `main` 尚无首次提交，
   全部文件未跟踪，空 `git diff` 不能证明没有变化。
 - 本轮修改前实际基线：单元测试 **96 项 OK**、GUI **125/125**，退出码均为 0。
 - 历史记录：`docs/verification-2026-10-19.md` 记载 96 项单测、125 项 GUI。

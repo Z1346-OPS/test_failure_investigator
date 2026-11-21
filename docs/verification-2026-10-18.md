@@ -62,7 +62,7 @@
 
 ## 5. 真实记录只读回放
 
-目录：`D:\Projects\Python\camera-quality-diagnostics\data\reports\acceptance-20261016-135457-6277a5b2`。
+目录：`<摄像头项目仓库>\data\reports\acceptance-20261016-135457-6277a5b2`。
 只调用本项目读取与解释，未修改、未重新采集、未输出二维码载荷或本机路径。
 
 | 文件 | 读取 | 关键解释 |

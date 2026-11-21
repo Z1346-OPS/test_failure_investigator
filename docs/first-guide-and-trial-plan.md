@@ -120,11 +120,11 @@
 
 ## 5. 已核对来源与限制
 
-摄像头根目录：`D:\Projects\Python\camera-quality-diagnostics`。历史验收被测提交：`81b86e6d6b2b264890d2229e12856b7ef15b19ea`。来源于 2026-10-16 只读核对，不是本轮重验；本机忽略目录不是公开可获取的案例库。
+摄像头根目录：`<摄像头项目仓库>`。历史验收被测提交：`81b86e6d6b2b264890d2229e12856b7ef15b19ea`。来源于 2026-10-16 只读核对，不是本轮重验；本机忽略目录不是公开可获取的案例库。
 
-- 总入口：[真实使用验收](D:/Projects/Python/camera-quality-diagnostics/docs/tasks/real-use-acceptance-2026-10-16.md)、[既有复核演示](D:/Projects/Python/camera-quality-diagnostics/docs/tasks/capture-review-walkthrough.md)。未执行其中脚本。
-- E1：[整图汇总](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/physical-qr-summary.json)、[ROI 汇总](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/physical-qr-roi-summary.json)的 cases 状态；[真值逻辑](D:/Projects/Python/camera-quality-diagnostics/src/label_analysis.py)的 check_expected 与[执行状态映射](D:/Projects/Python/camera-quality-diagnostics/src/analyze_label.py)。未重新解码图片或读取载荷。
-- E2：[缺图输出](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/missing-image.stdout.txt)、[指标差异输出](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/changed-metric.stdout.txt)、[正常对照](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/normal.stdout.txt)、[历史离线审计](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/offline-audit.json)的 checks、[复核源码](D:/Projects/Python/camera-quality-diagnostics/src/review_capture.py)的 EXIT_CODES。审计 pass 是历史脚本记录，未由本轮独立重算。
-- E3：[打开失败记录](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/unavailable-device-check.json)、[后续检查](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/additional-preview-checks.json)的 recovery-preview、[恢复复核](D:/Projects/Python/camera-quality-diagnostics/data/reports/acceptance-20261016-135457-6277a5b2/recovery-preview.review.json)。恢复范围同时参考总入口，不对未知驱动/设备原因作结论。
+- 总入口：真实使用验收（摄像头项目 `docs/tasks/real-use-acceptance-2026-10-16.md`）、既有复核演示（摄像头项目 `docs/tasks/capture-review-walkthrough.md`）。未执行其中脚本。
+- E1：整图汇总（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/physical-qr-summary.json`）、ROI 汇总（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/physical-qr-roi-summary.json`）的 cases 状态；真值逻辑（摄像头项目 `src/label_analysis.py`）的 check_expected 与执行状态映射（摄像头项目 `src/analyze_label.py`）。未重新解码图片或读取载荷。
+- E2：缺图输出（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/missing-image.stdout.txt`）、指标差异输出（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/changed-metric.stdout.txt`）、正常对照（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/normal.stdout.txt`）、历史离线审计（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/offline-audit.json`）的 checks、复核源码（摄像头项目 `src/review_capture.py`）的 EXIT_CODES。审计 pass 是历史脚本记录，未由本轮独立重算。
+- E3：打开失败记录（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/unavailable-device-check.json`）、后续检查（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/additional-preview-checks.json`）的 recovery-preview、恢复复核（摄像头项目 `data/reports/acceptance-20261016-135457-6277a5b2/recovery-preview.review.json`）。恢复范围同时参考总入口，不对未知驱动/设备原因作结论。
 
 暂缓：曝光变化原因、跨照明阈值、硬件故障、物理断连恢复、实拍解码错误根因、旧 pytest 缺陷重建。现有材料不足以支持这些场景的确定性排查结论。

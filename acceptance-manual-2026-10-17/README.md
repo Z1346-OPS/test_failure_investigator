@@ -31,7 +31,7 @@
 打开 PowerShell，运行：
 
 ```powershell
-Set-Location 'D:\AIProjects\projects\test_failure_investigator'
+Set-Location '<本仓库根>'
 .\.venv\Scripts\python.exe -B -X utf8 src\run_investigator.py
 ```
 
@@ -39,7 +39,7 @@ Set-Location 'D:\AIProjects\projects\test_failure_investigator'
 
 文件对话框中粘贴本目录路径：
 
-`D:\AIProjects\projects\test_failure_investigator\acceptance-manual-2026-10-17`
+`<本仓库根>\acceptance-manual-2026-10-17`
 
 “选择报告”开始一个调查；“补充结果”向当前调查加入后续材料。独立用例之间先保存，再关闭、重开程序，防止现有的说明串入问题干扰体验。
 
@@ -89,7 +89,7 @@ run_id 不同不等于现实中绝对无关；本版按此保守拒绝比较。�
 
 以下五份文件本轮均确认存在，且可由当前读取器读取。这只验证读取兼容性，没有验证所有解释正确，也没有重新执行源检查。
 
-目录：`D:\Projects\Python\camera-quality-diagnostics\data\reports\acceptance-20261016-135457-6277a5b2`
+目录：`<摄像头项目仓库>\data\reports\acceptance-20261016-135457-6277a5b2`
 
 | 目录下的文件 | 核对重点 |
 | --- | --- |

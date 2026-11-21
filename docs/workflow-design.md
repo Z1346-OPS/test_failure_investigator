@@ -253,7 +253,7 @@ not_decoded/conflict 是当前源码可表达的状态，本轮只核对静态�
 
 ## 11. 来源、已决定与待验证
 
-业务边界与历史证据索引沿用[首轮指引第 5 节](first-guide-and-trial-plan.md#5-已核对来源与限制)，其来源不变。本轮另只读核对 [capture_task.py](D:/Projects/Python/camera-quality-diagnostics/src/capture_task.py) 的 `_new_report`、[run_capture.py](D:/Projects/Python/camera-quality-diagnostics/src/run_capture.py) 的参数入口、[label_analysis.py](D:/Projects/Python/camera-quality-diagnostics/src/label_analysis.py) 的 `summarize_decodes/check_expected`、[review_capture.py](D:/Projects/Python/camera-quality-diagnostics/src/review_capture.py) 的 `_not_reviewed/_result`。这些是静态字段依据，不是当前环境执行证明；版本变化后要重新核对适配器。
+业务边界与历史证据索引沿用[首轮指引第 5 节](first-guide-and-trial-plan.md#5-已核对来源与限制)，其来源不变。本轮另只读核对 capture_task.py（摄像头项目 `src/capture_task.py`） 的 `_new_report`、run_capture.py（摄像头项目 `src/run_capture.py`） 的参数入口、label_analysis.py（摄像头项目 `src/label_analysis.py`） 的 `summarize_decodes/check_expected`、review_capture.py（摄像头项目 `src/review_capture.py`） 的 `_not_reviewed/_result`。这些是静态字段依据，不是当前环境执行证明；版本变化后要重新核对适配器。
 
 已决定：单目标起步、五维独立、用户主动导入、只读源材料、同源指引、复验范围明确、可带未知交接、基础无需 AI。
 

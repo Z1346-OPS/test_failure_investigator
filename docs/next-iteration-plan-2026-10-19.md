@@ -5,7 +5,7 @@
 
 ## 1. 已核实的起点
 
-助手根目录：`D:\AIProjects\projects\test_failure_investigator`。
+助手根目录：`<本仓库根>`。
 
 - 当前 Git main 尚无提交；源码、测试、文档均未跟踪，空 `git diff` 不能证明没有变更。
 - `.gitignore` 已排除环境和 Python 缓存，但未排除 `backups/`。首次提交不可使用未经审核的 `git add .`。

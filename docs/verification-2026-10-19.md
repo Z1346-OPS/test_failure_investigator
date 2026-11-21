@@ -7,7 +7,7 @@
 
 ## 0. 起点与备份
 
-- 项目根：`D:\AIProjects\projects\test_failure_investigator`；分支 `main` 尚无首次提交，
+- 项目根：`<本仓库根>`；分支 `main` 尚无首次提交，
   全部文件未跟踪，空 `git diff` 不能证明没有变化。
 - 修改前基线：单元测试 75 项 OK；GUI 冒烟 83/83，退出码 0。
 - 修改前单文件备份与摘要：`backups/2026-10-19_15-32/`（`MANIFEST.txt` 为 SHA-256）。

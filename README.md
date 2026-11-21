@@ -1,6 +1,6 @@
 # 排查助手（本地原型）
 
-为 `D:\Projects\Python\camera-quality-diagnostics` 的用户提供一个单窗口的
+为 [camera-quality-diagnostics](https://github.com/Z1346-OPS/camera-quality-diagnostics)（摄像头采集与 QR 测试工具）的用户提供一个单窗口的
 **排查指引与证据助手**：选择已有报告 → 看懂结果和下一步 → 按需补充结果或保存一份说明。
 
 基础能力**不需要 AI、账户或网络**。程序只读用户选择的已有文件，不启动摄像头、
@@ -105,6 +105,8 @@ python -m venv .venv
 测试材料全部是 `tests/synthetic.py` 生成的**合成报告**，不含实拍图片、真实二维码载荷
 或私人报告。
 
+最近一次实测（2026-11-21，代码与提交 `93dc1ee` 相同；Linux，Python 3.12.13，Xvfb 虚拟显示）：单元测试 **199 项全部通过**；`tests\gui_smoke.py` **161/161 项通过**；`tests\gui_closeout_regressions.py` **14 项通过**。最早的单元测试基线是 67 项（2026-10-18，见 [docs/verification-2026-10-18.md](docs/verification-2026-10-18.md)）。
+
 ## 目录
 
 ```
@@ -118,6 +120,8 @@ src/investigator/ui.py         单窗口 Tkinter 界面
 tests/                         合成材料、单元测试与图形冒烟
 docs/                          方向、简化设计、流程与首轮指引（历史文档不改写）
 ```
+
+`docs/` 与验收记录中的本机绝对路径已替换为占位符：`<本仓库根>`、`<摄像头项目仓库>`、`<本机项目目录>`、`<用户目录>`、`<仓库外临时目录>`；只改路径文字，结论与数字保持原样。两份早期调研记录未公开。
 
 ## 当前状态
 
@@ -201,3 +205,7 @@ QR 回答以主报告及最近一次非重复补充报告为依据。同图复�
 ```powershell
 .\.venv\Scripts\python.exe -B -X utf8 tests\gui_closeout_regressions.py -v
 ```
+
+## 许可
+
+MIT，见 [LICENSE](LICENSE)。

@@ -141,7 +141,7 @@ compare_frame_metrics 固定输出五项指标，每项为保存值与一位小�
 模拟部分：系统选文件/保存对话框用固定路径替代；原有写入失败用 PermissionError 注入，
 未改系统权限。没有系统文件对话框人工点击。
 
-最终 GUI 原输出目录：C:\Users\zex\AppData\Local\Temp\rfg-gui-5exh9q1x。
+最终 GUI 原输出目录：<仓库外临时目录>\rfg-gui-5exh9q1x。
 两张新增截图已逐张目视核对主区的帧 2 未解决和缺失证据/矛盾。
 合成输入、两份实际导出及截图另存本轮备份 gui-artifacts-final-v2/。
 截图目视不等于完整人工体验；未验证其他缩放、分辨率或真实用户完成率。
